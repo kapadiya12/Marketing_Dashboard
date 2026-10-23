@@ -1,0 +1,35 @@
+{{ palette_items|json_script:"palette-data" }}
+<div class="modal fade palette" id="palette" tabindex="-1" aria-label="Command palette" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <input class="form-control palette-input" id="palette-input" type="search" autocomplete="off"
+             placeholder="Jump to a page, product or module — or search records…" aria-label="Search">
+      <div class="palette-list" id="palette-list" role="listbox"></div>
+      <div class="palette-records" id="palette-records"></div>
+      <div class="palette-footer">
+        <span><span class="kbd">↑</span> <span class="kbd">↓</span> navigate</span>
+        <span><span class="kbd">Enter</span> open</span>
+        <span><span class="kbd">Esc</span> close</span>
+        <span class="ms-auto"><span class="kbd">?</span> shortcuts</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="shortcuts" tabindex="-1" aria-label="Keyboard shortcuts" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0"><h5 class="modal-title"><i class="bi bi-keyboard me-2 text-primary"></i>Keyboard shortcuts</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+      <div class="modal-body">
+        <div class="list-row px-0"><span class="flex-grow-1">Open command palette / search</span><span class="kbd">Ctrl</span><span class="kbd">K</span></div>
+        <div class="list-row px-0"><span class="flex-grow-1">Search</span><span class="kbd">/</span></div>
+        <div class="list-row px-0"><span class="flex-grow-1">New record (on a module page)</span><span class="kbd">N</span></div>
+        <div class="list-row px-0"><span class="flex-grow-1">Go to dashboard</span><span class="kbd">G</span> <span class="kbd">D</span></div>
+        <div class="list-row px-0"><span class="flex-grow-1">Go to My day</span><span class="kbd">G</span> <span class="kbd">T</span></div>
+        <div class="list-row px-0"><span class="flex-grow-1">Toggle dark mode</span><span class="kbd">Shift</span><span class="kbd">D</span></div>
+        <div class="list-row px-0"><span class="flex-grow-1">Show this help</span><span class="kbd">?</span></div>
+      </div>
+    </div>
+  </div>
+</div>

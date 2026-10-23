@@ -1,0 +1,20 @@
+{% comment %}
+Export dropdown. Links always use the page's *current* filters (read by app.js at click time, so they stay
+correct after HTMX filter changes). Optional: path (export endpoint, default current page), formats, label, size.
+{% endcomment %}
+<div class="dropdown d-inline-block">
+  <button class="btn btn-outline-secondary btn-{{ size|default:'sm' }} dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+    <i class="bi bi-download me-1"></i>{{ label|default:"Export" }}
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    {% with f=formats|default:"csv,xlsx,pdf" %}
+      {% if "csv" in f %}<li><a class="dropdown-item" href="{{ path|default:'' }}?format=csv" data-export-format="csv" {% if path %}data-export-path="{{ path }}"{% endif %}><i class="bi bi-filetype-csv me-2"></i>CSV</a></li>{% endif %}
+      {% if "xlsx" in f %}<li><a class="dropdown-item" href="{{ path|default:'' }}?format=xlsx" data-export-format="xlsx" {% if path %}data-export-path="{{ path }}"{% endif %}><i class="bi bi-file-earmark-excel me-2"></i>Excel</a></li>{% endif %}
+      {% if "pdf" in f %}<li><a class="dropdown-item" href="{{ path|default:'' }}?format=pdf" data-export-format="pdf" {% if path %}data-export-path="{{ path }}"{% endif %}><i class="bi bi-filetype-pdf me-2"></i>PDF</a></li>{% endif %}
+    {% endwith %}
+    {% if extra_url %}<li><hr class="dropdown-divider"></li><li><a class="dropdown-item" href="{{ extra_url }}"><i class="bi bi-grid-3x3 me-2"></i>{{ extra_label }}</a></li>{% endif %}
+    {% if snapshot_path %}<li><hr class="dropdown-divider"></li>
+      <li><a class="dropdown-item" href="{{ snapshot_path }}" data-export-format="html" data-export-path="{{ snapshot_path }}"><i class="bi bi-filetype-html me-2"></i>Shareable HTML page</a></li>
+      <li><a class="dropdown-item small text-muted" href="{{ snapshot_path }}?private=1" data-export-format="html" data-export-path="{{ snapshot_path }}?private=1"><i class="bi bi-shield-lock me-2"></i>…with emails &amp; internal notes</a></li>{% endif %}
+  </ul>
+</div>

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Notifications{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Notifications</h1><p class="subtitle">In-app notifications for assignments, reminders and announcements.</p></div>
+  <form method="post" action="{% url 'notifications:read_all' %}">{% csrf_token %}<button class="btn btn-light border btn-sm">Mark all read</button></form></div>
+<div class="card">
+  {% for n in page.object_list %}
+    <form method="post" action="{% url 'notifications:read' n.pk %}">{% csrf_token %}
+      <button class="list-row w-100 border-0 text-start {% if not n.is_read %}bg-light{% else %}bg-white{% endif %}" type="submit">
+        <i class="bi bi-circle-fill text-{{ n.level }}" style="font-size:.55rem"></i>
+        <span class="flex-grow-1 min-w-0"><span class="d-block fw-semibold">{{ n.title }}</span><span class="meta d-block">{{ n.message }}</span></span>
+        <small class="text-muted text-nowrap">{{ n.created_at|date:"d M, H:i" }}</small>
+      </button>
+    </form>
+  {% empty %}
+    {% include "components/empty_state.html" with icon="bi-bell" title="No notifications" %}
+  {% endfor %}
+  {% include "components/pagination.html" %}
+</div>
+{% endblock %}

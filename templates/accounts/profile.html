@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Profile{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>{{ user|display_name }}</h1><p class="subtitle">{{ user.email }} · {{ user.profile.role_label }}</p></div>
+  <a class="btn btn-light border btn-sm" href="{% url 'accounts:password_change' %}"><i class="bi bi-key me-1"></i>Change password</a></div>
+<div class="card">
+  <div class="card-header"><h3 class="card-title">Your access by product and module</h3></div>
+  {% if rows %}
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead><tr><th>Product</th>{% for m in modules %}<th title="{{ m.label }}">{{ m.short_label }}</th>{% endfor %}</tr></thead>
+      <tbody>{% for r in rows %}<tr><td class="fw-semibold text-nowrap"><span class="product-dot" style="background:{{ r.product.brand_color }}"></span>{{ r.product.name }}</td>
+        {% for m in modules %}<td>{{ r.levels|get_item:m.key|level_badge }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+    </table>
+  </div>
+  {% else %}{% include "components/empty_state.html" with icon="bi-shield-lock" title="No product access yet" message="Ask an administrator to add you to a product." %}{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}{{ product.name }}{% endblock %}
+{% block content %}
+<section class="hero hero-product" style="--brand: {{ product.brand_color }}">
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 position-relative" style="z-index:3">
+  <div class="d-flex align-items-center gap-3 min-w-0">
+    <div class="hero-logo">{% if product.logo %}<img src="{{ product.logo.url }}" alt="{{ product.name }} logo">{% else %}{{ product.initials }}{% endif %}</div>
+    <div class="min-w-0">
+      <nav aria-label="breadcrumb"><ol class="breadcrumb mb-1"><li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">Dashboard</a></li><li class="breadcrumb-item active">{{ product.name }}</li></ol></nav>
+      <h1>{{ product.name }}{% if not product.is_active %} <span class="badge bg-secondary fs-6">Inactive</span>{% endif %}</h1>
+      <p>{{ product.description|default:product.tagline }}</p>
+    </div>
+  </div>
+  <div class="d-flex flex-wrap gap-2 align-items-center hero-actions">
+    <form class="filter-bar" id="product-filters" method="get" hx-get="{{ request.path }}" hx-target="#product-content" hx-trigger="change" hx-push-url="true">
+      <select class="form-select form-select-sm" name="period" data-custom-toggle aria-label="Date range">
+        {% for key, label in periods %}<option value="{{ key }}" {% if period.key == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+      <input class="form-control form-control-sm {% if period.key != 'custom' %}d-none{% endif %}" data-custom-range type="date" name="start" value="{{ request.GET.start }}" aria-label="From">
+      <input class="form-control form-control-sm {% if period.key != 'custom' %}d-none{% endif %}" data-custom-range type="date" name="end" value="{{ request.GET.end }}" aria-label="To">
+    </form>
+    <div class="dropdown">
+      <button class="btn btn-sm btn-white dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-plus-lg me-1"></i>Quick add</button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        {% for c in module_cards %}{% if c.can_write %}
+          <li><a class="dropdown-item" href="{% url 'products:record_create' product.slug c.resource.key %}"><i class="bi {{ c.module.icon }} me-2"></i>{{ c.resource.label }}</a></li>
+        {% endif %}{% endfor %}
+        {% if levels.tasks == 'write' or levels.tasks == 'manage' %}<li><hr class="dropdown-divider"></li><li><a class="dropdown-item" href="{% url 'products:record_create' product.slug 'tasks' %}"><i class="bi bi-check2-square me-2"></i>Task</a></li>{% endif %}
+      </ul>
+    </div>
+    <div class="dropdown">
+      <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-file-earmark-bar-graph me-1"></i>Reports</button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><a class="dropdown-item" href="{% url 'reports:index' %}?type=performance&product={{ product.slug }}&period=month">Monthly performance</a></li>
+        <li><a class="dropdown-item" href="{% url 'reports:index' %}?type=performance&product={{ product.slug }}&period=quarter">Quarterly performance</a></li>
+        <li><a class="dropdown-item" href="{% url 'reports:index' %}?type=overdue&product={{ product.slug }}&period=all">Overdue items</a></li>
+        <li><a class="dropdown-item" href="{% url 'reports:index' %}?type=targets&product={{ product.slug }}&period=quarter">Targets vs actual</a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="{% url 'reports:index' %}?type=performance&product={{ product.slug }}&period=month&format=pdf"><i class="bi bi-filetype-pdf me-2"></i>Download PDF (this month)</a></li>
+        <li><a class="dropdown-item" href="{% url 'reports:index' %}?type=performance&product={{ product.slug }}&period=month&format=xlsx"><i class="bi bi-file-earmark-excel me-2"></i>Download Excel (this month)</a></li>
+      </ul>
+    </div>
+    {% include "components/export_menu.html" %}
+    <div class="dropdown">
+      <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-upload me-1"></i>Import</button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        {% for c in module_cards %}{% if c.can_write %}
+          <li><a class="dropdown-item" href="{% url 'products:record_import' product.slug c.resource.key %}"><i class="bi {{ c.module.icon }} me-2"></i>{{ c.resource.label_plural }}</a></li>
+        {% endif %}{% endfor %}
+        {% if levels.tasks == 'write' or levels.tasks == 'manage' %}<li><a class="dropdown-item" href="{% url 'products:record_import' product.slug 'tasks' %}"><i class="bi bi-check2-square me-2"></i>Tasks</a></li>{% endif %}
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="{% url 'import_hub' %}?product={{ product.slug }}"><i class="bi bi-grid me-2"></i>All imports &amp; templates</a></li>
+      </ul>
+    </div>
+    {% if can_manage %}<a class="btn btn-light border btn-sm" href="{% url 'admin_panel:product_edit' product.pk %}" title="Product settings" aria-label="Product settings"><i class="bi bi-gear"></i></a>{% endif %}
+  </div>
+</div>
+<div class="hero-stats position-relative" style="z-index:1">
+  <a class="hero-stat" href="{% url 'analytics:drilldown' %}?metric=activities&product={{ product.slug }}"><i class="bi bi-activity"></i><strong data-count="{{ k.activities }}">{{ k.activities }}</strong> activities</a>
+  <a class="hero-stat" href="{% url 'analytics:drilldown' %}?metric=completed&product={{ product.slug }}"><i class="bi bi-check2-circle"></i><strong data-count="{{ k.completion_pct }}" data-suffix="%">{{ k.completion_pct }}%</strong> completed</a>
+  <a class="hero-stat" href="{% url 'analytics:drilldown' %}?metric=overdue&product={{ product.slug }}"><i class="bi bi-exclamation-triangle"></i><strong data-count="{{ k.overdue }}">{{ k.overdue }}</strong> overdue</a>
+  {% if levels.meetings != 'none' %}<a class="hero-stat" href="{% url 'products:records' product.slug 'meetings' %}?preset=upcoming"><i class="bi bi-people"></i><strong data-count="{{ k.meetings_upcoming }}">{{ k.meetings_upcoming }}</strong> upcoming meetings</a>{% endif %}
+</div>
+</section>
+
+<div id="product-content" hx-get="{{ request.path }}" hx-include="#product-filters" hx-trigger="dashboard-refresh from:body, every 120s">
+  {% include "products/_dashboard_content.html" %}
+</div>
+{% endblock %}

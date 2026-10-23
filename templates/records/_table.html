@@ -1,0 +1,76 @@
+{% load ui %}
+<div class="card">
+  <div class="card-header flex-wrap">
+    <h3 class="card-title">{{ total_count }} record{{ total_count|pluralize }}</h3>
+    <form id="bulk-form" method="post" action="{% url 'records:bulk' resource.key %}" class="d-none" data-bulk-bar>
+      {% csrf_token %}
+      <div class="d-flex flex-wrap align-items-center gap-2">
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <span class="small text-muted"><span data-count>0</span> selected</span>
+      <select class="form-select form-select-sm w-auto" name="action" data-bulk-action aria-label="Bulk action">
+        <option value="export_xlsx">Export selected (Excel)</option>
+        <option value="export_csv">Export selected (CSV)</option>
+        {% if can_write %}
+        <option value="status">Change status</option>
+        <option value="assign">Assign to</option>
+        <option value="archive">Archive</option>
+        <option value="restore">Restore</option>
+        {% if can_manage %}<option value="delete">Delete permanently</option>{% endif %}
+        {% endif %}
+      </select>
+      <select class="form-select form-select-sm w-auto d-none" name="status" data-bulk-extra="status" aria-label="New status">
+        {% for s in statuses %}<option value="{{ s.key }}">{{ s.label }}</option>{% endfor %}
+      </select>
+      <select class="form-select form-select-sm w-auto d-none" name="assigned_to" data-bulk-extra="assign" aria-label="Assignee">
+        <option value="">Unassigned</option>
+        {% for u in users %}<option value="{{ u.pk }}">{{ u|display_name }}</option>{% endfor %}
+      </select>
+      <button class="btn btn-sm btn-primary" type="submit" name="apply" value="apply">Apply</button>
+      </div>
+    </form>
+  </div>
+  {% if page.object_list %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle table-mobile-cards">
+      <thead>
+        <tr>
+          <th style="width:36px"><input class="form-check-input" type="checkbox" data-check-all aria-label="Select all"></th>
+          {% for col in column_defs %}
+            <th>{% if col.sortable %}<a href="?{% query_replace sort=current_sort|next_sort:col.name %}">{{ col.label }} {{ current_sort|sort_icon:col.name }}</a>{% else %}{{ col.label }}{% endif %}</th>
+          {% endfor %}
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for obj in page.object_list %}
+        <tr class="{% if obj.is_archived %}opacity-50{% endif %}" data-href="{{ obj.get_absolute_url }}">
+          <td class="cell-check"><input class="form-check-input" type="checkbox" name="ids" value="{{ obj.pk }}" form="bulk-form" aria-label="Select record"></td>
+          {% for col in column_defs %}
+            <td data-label="{{ col.label }}">
+              {% if forloop.first %}
+                <a class="row-title" href="{{ obj.get_absolute_url }}">{% render_cell obj col.name resource %}</a>
+                {% if obj.is_archived %}<span class="badge bg-secondary ms-1">Archived</span>{% endif %}
+              {% elif col.name == 'status' and can_write %}
+                <select class="form-select form-select-sm status-select" name="status" aria-label="Status"
+                        hx-post="{% url 'records:status' resource.key obj.pk %}" hx-trigger="change" hx-swap="none">
+                  {% for s in statuses %}<option value="{{ s.key }}" data-color="{{ s.color }}" {% if s.key == obj.status %}selected{% endif %}>{{ s.label }}</option>{% endfor %}
+                </select>
+              {% else %}
+                {% render_cell obj col.name resource %}
+              {% endif %}
+            </td>
+          {% endfor %}
+          <td class="text-end text-nowrap" data-label="">
+            <a class="btn btn-sm btn-light border" href="{{ obj.get_absolute_url }}" title="View" aria-label="View"><i class="bi bi-eye"></i></a>
+            {% if can_write %}<a class="btn btn-sm btn-light border" href="{% url 'records:edit' resource.key obj.pk %}" title="Edit" aria-label="Edit"><i class="bi bi-pencil"></i></a>{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "components/pagination.html" with htmx_target="record-results" %}
+  {% else %}
+    {% include "records/_empty.html" %}
+  {% endif %}
+</div>

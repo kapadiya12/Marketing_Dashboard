@@ -1,0 +1,12 @@
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toast-container" aria-live="polite">
+  {% for message in messages %}
+    {% with tag=message.tags|default:"info" %}
+    <div class="toast align-items-center border-0 text-bg-{% if tag == 'error' %}danger{% elif tag == 'debug' %}secondary{% else %}{{ tag }}{% endif %}" role="alert">
+      <div class="d-flex">
+        <div class="toast-body"><i class="bi {% if tag == 'success' %}bi-check-circle-fill{% elif tag == 'error' %}bi-exclamation-octagon-fill{% elif tag == 'warning' %}bi-exclamation-triangle-fill{% else %}bi-info-circle-fill{% endif %}"></i>{{ message }}</div>
+        <button type="button" class="btn-close {% if tag != 'warning' and tag != 'info' %}btn-close-white{% endif %} me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+    </div>
+    {% endwith %}
+  {% endfor %}
+</div>

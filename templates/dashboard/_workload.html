@@ -1,0 +1,17 @@
+{% load ui %}
+<div class="card h-100">
+  <div class="card-header"><h3 class="card-title">Team workload</h3><small class="text-muted">Open items assigned</small></div>
+  {% for w in workload %}
+    <a class="list-row list-row-link" href="{{ w.url }}" title="View open work assigned to {{ w.user|display_name }}">
+      <span class="avatar">{{ w.user|initials }}</span>
+      <div class="flex-grow-1 min-w-0">
+        <div class="d-flex justify-content-between"><span class="fw-semibold text-truncate">{{ w.user|display_name }}</span><small>{{ w.open }} open</small></div>
+        <div class="progress my-1"><div class="progress-bar" data-width="{{ w.pct }}%" style=""></div></div>
+        <div class="meta">{{ w.tasks }} task{{ w.tasks|pluralize }}{% if w.overdue %} · <span class="text-danger">{{ w.overdue }} overdue</span>{% endif %}</div>
+      </div>
+      <i class="bi bi-chevron-right text-muted"></i>
+    </a>
+  {% empty %}
+    {% include "components/empty_state.html" with icon="bi-people" title="No assigned open work" message="Assign records and tasks to team members to see workload." %}
+  {% endfor %}
+</div>

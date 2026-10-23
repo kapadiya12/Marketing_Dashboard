@@ -1,0 +1,28 @@
+{% load ui %}
+<div class="card">
+  <div class="card-header">
+    <a class="btn btn-sm btn-light border" href="?{% query_replace month=prev_month %}" aria-label="Previous month"><i class="bi bi-chevron-left"></i></a>
+    <h3 class="card-title">{{ cal_month|date:"F Y" }}</h3>
+    <a class="btn btn-sm btn-light border" href="?{% query_replace month=next_month %}" aria-label="Next month"><i class="bi bi-chevron-right"></i></a>
+  </div>
+  <div class="table-responsive">
+    <table class="calendar">
+      <thead><tr>{% for d in "MTWTFSS" %}<th>{{ d }}</th>{% endfor %}</tr></thead>
+      <tbody>
+      {% for week in weeks %}
+        <tr>
+          {% for day in week %}
+            <td class="{% if not day.in_month %}out{% endif %} {% if day.is_today %}today{% endif %}">
+              <div class="day">{{ day.date.day }}</div>
+              {% for obj in day.items|slice:":4" %}
+                <a class="cal-item" href="{{ obj.get_absolute_url }}" title="{{ obj }}" style="border-left:3px solid {{ obj.product.brand_color }}">{{ obj }}</a>
+              {% endfor %}
+              {% if day.items|length > 4 %}<small class="text-muted">+{{ day.items|length|add:-4 }} more</small>{% endif %}
+            </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>

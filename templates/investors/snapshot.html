@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Investor Pipeline · {{ scope }}</title>
+<style>
+:root {
+  --bg: #f4f6fb; --surface: #ffffff; --surface-2: #f8fafc; --surface-3: #eef1f7; --border: #e4e8f1;
+  --text: #0f172a; --text-2: #334155; --muted: #64748b; --accent: #4f46e5; --accent-soft: #eef2ff;
+  --shadow: 0 1px 2px rgba(15,23,42,.04), 0 4px 14px rgba(15,23,42,.06); --radius: 14px;
+  --hero-1: #1e1b4b; --hero-2: #4338ca;
+}
+:root[data-theme="dark"] {
+  --bg: #0b0f19; --surface: #131826; --surface-2: #182033; --surface-3: #1e2740; --border: #252e44;
+  --text: #e6e9f2; --text-2: #c3c9d8; --muted: #8e98ad; --accent: #818cf8; --accent-soft: rgba(129,140,248,.14);
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.3); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; overflow-x: hidden; }
+body { background: var(--bg); color: var(--text); font: 14px/1.5 "Inter", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.wrap { max-width: 1320px; margin: 0 auto; padding: 24px 16px 48px; }
+.hero { border-radius: 18px; padding: 26px 28px; color: #fff; position: relative; overflow: hidden;
+  background: radial-gradient(900px 260px at 100% 0%, rgba(129,140,248,.5), transparent 60%), linear-gradient(120deg, var(--hero-1), var(--hero-2));
+  box-shadow: 0 18px 40px rgba(49,46,129,.25); }
+.hero .eyebrow { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; opacity: .7; font-weight: 600; }
+.hero h1 { margin: 6px 0 4px; font-size: 28px; letter-spacing: -.02em; }
+.hero p { margin: 0; opacity: .8; }
+.hero .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 99px; font-size: 12.5px;
+  background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.18); }
+.hero-actions { position: absolute; top: 20px; right: 20px; display: flex; gap: 8px; }
+.btn { appearance: none; border: 1px solid var(--border); background: var(--surface); color: var(--text-2); border-radius: 10px;
+  padding: 7px 12px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s ease; }
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.hero .btn { background: rgba(255,255,255,.14); color: #fff; border-color: rgba(255,255,255,.25); }
+.hero .btn:hover { background: rgba(255,255,255,.24); color: #fff; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 12px; margin: 20px 0; }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow); }
+.kpi .label { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 650; }
+.kpi .value { font-size: 26px; font-weight: 750; letter-spacing: -.02em; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.kpi .hint { font-size: 12px; color: var(--muted); }
+.grid2 { display: grid; grid-template-columns: 1.6fr 1fr; gap: 14px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+.card-h { padding: 13px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.card-h h2 { margin: 0; font-size: 15px; letter-spacing: -.01em; }
+.card-b { padding: 14px 16px; }
+.muted { color: var(--muted); }
+.small { font-size: 12.5px; }
+/* bar chart */
+.bars { display: grid; gap: 8px; }
+.bar-row { display: grid; grid-template-columns: 170px 1fr 34px; gap: 10px; align-items: center; cursor: pointer; border-radius: 8px; padding: 2px 4px; }
+.bar-row:hover { background: var(--surface-2); }
+.bar-row .name { font-size: 12.5px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-track { display: block; height: 14px; background: var(--surface-3); border-radius: 4px; overflow: hidden; }
+.bar-fill { display: block; height: 100%; border-radius: 0 4px 4px 0; width: 0; transition: width .8s cubic-bezier(.2,.8,.2,1); }
+.bar-row .n { font-weight: 700; font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; }
+/* toolbar */
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 22px 0 12px; }
+.toolbar input, .toolbar select { font: inherit; font-size: 13px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+.toolbar input { flex: 1; min-width: 220px; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.seg button { border: 0; background: transparent; color: var(--text-2); padding: 8px 13px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.seg button.on { background: var(--accent-soft); color: var(--accent); }
+/* board */
+.board { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x proximity; }
+.col { min-width: 250px; width: 250px; flex-shrink: 0; background: var(--surface-3); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; scroll-snap-align: start; }
+.col-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 99px; font-size: 11.5px; font-weight: 650; color: var(--text-2); border: 1px solid var(--border); }
+.icard { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 11px; margin-bottom: 8px; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease; }
+.icard:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.icard .t { font-weight: 650; font-size: 13.5px; }
+.icard .s { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.empty { font-size: 12px; color: var(--muted); text-align: center; padding: 14px 0; }
+/* table */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 650; padding: 10px 12px; background: var(--surface-2); border-bottom: 1px solid var(--border); cursor: pointer; white-space: nowrap; user-select: none; }
+th:hover { color: var(--accent); }
+td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tbody tr { cursor: pointer; transition: background .12s ease; }
+tbody tr:hover { background: var(--surface-2); }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* drawer */
+.backdrop { position: fixed; inset: 0; background: rgba(2,6,23,.5); opacity: 0; pointer-events: none; transition: opacity .2s ease; z-index: 20; }
+.backdrop.open { opacity: 1; pointer-events: auto; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(520px, 100vw); background: var(--surface); border-left: 1px solid var(--border); z-index: 21; transform: translateX(100%); transition: transform .25s cubic-bezier(.2,.8,.2,1); display: flex; flex-direction: column; }
+.drawer.open { transform: none; }
+.drawer-h { padding: 18px 20px; border-bottom: 1px solid var(--border); display: flex; gap: 12px; justify-content: space-between; align-items: flex-start; }
+.drawer-h h3 { margin: 0 0 6px; font-size: 19px; letter-spacing: -.01em; }
+.drawer-b { padding: 18px 20px; overflow-y: auto; }
+.dl { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; margin: 0 0 18px; }
+.dl dt { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 650; }
+.dl dd { margin: 2px 0 0; word-break: break-word; }
+.dl .full { grid-column: 1 / -1; }
+.timeline { list-style: none; padding: 0; margin: 0; }
+.timeline li { position: relative; padding: 0 0 14px 18px; border-left: 2px solid var(--border); margin-left: 5px; }
+.timeline li::before { content: ""; position: absolute; left: -6px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); }
+.close { border: 0; background: var(--surface-3); color: var(--text-2); width: 34px; height: 34px; border-radius: 10px; font-size: 18px; cursor: pointer; flex-shrink: 0; }
+.note { margin-top: 26px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 14px; }
+.hidden { display: none !important; }
+@media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } .hero-actions { position: static; margin-top: 14px; } .bar-row { grid-template-columns: 120px 1fr 30px; } }
+@media (max-width: 520px) { .hero { padding: 20px; } .hero h1 { font-size: 22px; } .kpis { grid-template-columns: repeat(2, 1fr); } .kpi .value { font-size: 21px; } .dl { grid-template-columns: 1fr; } }
+@media print {
+  body { background: #fff; } .hero-actions, .toolbar, .backdrop, .drawer { display: none !important; }
+  .hero { box-shadow: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .card, .kpi { box-shadow: none; break-inside: avoid; } #board-view { display: none !important; } #table-view { display: block !important; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="eyebrow">Fundraising pipeline</div>
+    <h1>Investor Pipeline — {{ scope }}</h1>
+    <p>Snapshot of prospective investors and where each conversation stands.</p>
+    <div class="meta">
+      <span class="chip">📅 Generated {{ generated|date:"d M Y, H:i" }}</span>
+      <span class="chip">🏦 <span id="m-total"></span> investors</span>
+      {% if filters_label %}<span class="chip">🔎 {{ filters_label }}</span>{% endif %}
+      {% if prepared_by %}<span class="chip">👤 Prepared by {{ prepared_by }}</span>{% endif %}
+    </div>
+    <div class="hero-actions">
+      <button class="btn" type="button" id="theme-btn" aria-label="Toggle dark mode">🌙 Theme</button>
+      <button class="btn" type="button" onclick="window.print()">🖨 Print / PDF</button>
+    </div>
+  </header>
+
+  <section class="kpis" id="kpis" aria-label="Summary"></section>
+
+  <section class="grid2">
+    <div class="card">
+      <div class="card-h"><h2>Pipeline by stage</h2><span class="muted small">Click a stage to filter</span></div>
+      <div class="card-b"><div class="bars" id="stage-bars"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>By investor category</h2><span class="muted small">Prospective targets</span></div>
+      <div class="card-b"><div class="bars" id="cat-bars"></div></div>
+    </div>
+  </section>
+
+  <div class="toolbar">
+    <input type="search" id="q" placeholder="Search investors, thesis, focus, contact…" aria-label="Search">
+    <select id="f-stage" aria-label="Stage"><option value="">All stages</option></select>
+    <select id="f-cat" aria-label="Category"><option value="">All categories</option></select>
+    <select id="f-product" aria-label="Product"><option value="">All products</option></select>
+    <div class="seg" role="group" aria-label="View">
+      <button type="button" class="on" data-view="board">Board</button>
+      <button type="button" data-view="table">Table</button>
+    </div>
+  </div>
+
+  <section id="board-view"><div class="board" id="board"></div></section>
+  <section id="table-view" class="card hidden">
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th data-sort="name">Investor</th><th data-sort="category">Category</th><th data-sort="product">Product</th>
+          <th data-sort="stage_order">Stage</th><th data-sort="investment_stage">Invests at</th>
+          <th data-sort="meeting_date">Meeting</th><th data-sort="follow_up_date">Follow-up</th>
+          <th data-sort="funding_target" class="num">Target</th><th data-sort="funding_discussed" class="num">Discussed</th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <p class="note">Investor categories (e.g. accelerators, angel networks, VC firms) are prospective targets, not confirmed relationships. “Committed” appears only where a commitment has been explicitly recorded. Amounts in {{ currency }}.{% if not include_private %} Contact emails and internal notes are omitted from this shared copy.{% endif %}</p>
+</div>
+
+<div class="backdrop" id="backdrop"></div>
+<aside class="drawer" id="drawer" aria-label="Investor details" aria-hidden="true">
+  <div class="drawer-h"><div><h3 id="d-name"></h3><div id="d-sub"></div></div><button class="close" id="d-close" aria-label="Close">×</button></div>
+  <div class="drawer-b" id="d-body"></div>
+</aside>
+
+{{ data|json_script:"pipeline-data" }}
+<script>
+(function () {
+  "use strict";
+  const D = JSON.parse(document.getElementById("pipeline-data").textContent);
+  const root = document.documentElement;
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const money = (v) => {
+    if (v == null || v === "") return "—";
+    const n = Number(v); const sym = D.currency;
+    if (n >= 1e7) return sym + (n / 1e7).toFixed(2) + " Cr";
+    if (n >= 1e5) return sym + (n / 1e5).toFixed(2) + " L";
+    return sym + n.toLocaleString("en-IN");
+  };
+  const fmtDate = (s) => s ? new Date(s.length > 10 ? s : s + "T00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+  const PALETTE = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"];
+
+  // theme
+  try { const saved = localStorage.getItem("pipeline-theme"); if (saved) root.setAttribute("data-theme", saved);
+    else if (matchMedia("(prefers-color-scheme: dark)").matches) root.setAttribute("data-theme", "dark"); } catch (e) {}
+  $("theme-btn").addEventListener("click", () => {
+    const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    root.setAttribute("data-theme", next); try { localStorage.setItem("pipeline-theme", next); } catch (e) {}
+  });
+
+  const state = { q: "", stage: "", cat: "", product: "", view: "board", sort: "stage_order", dir: 1 };
+  const inv = D.investors;
+  $("m-total").textContent = inv.length;
+
+  // KPIs
+  const sum = (k) => inv.reduce((a, x) => a + (Number(x[k]) || 0), 0);
+  const at = (keys) => inv.filter(x => keys.includes(x.stage)).length;
+  const beyond = inv.filter(x => !["researching", "ready_for_intro", "closed_not_proceeding"].includes(x.stage)).length;
+  const kpis = [
+    ["Investors tracked", inv.length, "In this snapshot"],
+    ["Contacted or beyond", beyond, inv.length ? Math.round(beyond * 100 / inv.length) + "% of pipeline" : ""],
+    ["Meetings / pitches", at(["meeting_scheduled", "pitch_delivered"]), "Scheduled or delivered"],
+    ["Diligence / negotiation", at(["due_diligence", "negotiation"]), "Advanced conversations"],
+    ["Committed (recorded)", at(["committed"]), "Explicitly confirmed only"],
+    ["Funding target", money(sum("funding_target")), "Sum of targets"],
+    ["Funding discussed", money(sum("funding_discussed")), "Sum discussed"],
+  ];
+  $("kpis").innerHTML = kpis.map(k => `<div class="kpi"><div class="label">${esc(k[0])}</div><div class="value">${esc(k[1])}</div><div class="hint">${esc(k[2])}</div></div>`).join("");
+
+  // filters
+  const opts = (sel, values) => values.forEach(v => sel.insertAdjacentHTML("beforeend", `<option value="${esc(v[0])}">${esc(v[1])}</option>`));
+  opts($("f-stage"), D.stages.map(s => [s.key, s.label]));
+  opts($("f-cat"), [...new Set(inv.map(x => x.category).filter(Boolean))].sort().map(c => [c, c]));
+  const prods = [...new Set(inv.map(x => x.product))].sort();
+  opts($("f-product"), prods.map(p => [p, p]));
+  if (prods.length < 2) $("f-product").classList.add("hidden");
+
+  function filtered() {
+    const q = state.q.toLowerCase();
+    return inv.filter(x => (!state.stage || x.stage === state.stage) && (!state.cat || x.category === state.cat) &&
+      (!state.product || x.product === state.product) &&
+      (!q || [x.name, x.category, x.product, x.thesis, x.industry_focus, x.contact_person, x.introduction_source, x.stage_label].join(" ").toLowerCase().includes(q)));
+  }
+
+  function bars(el, rows, onClick) {
+    const max = Math.max(1, ...rows.map(r => r.n));
+    el.innerHTML = rows.map((r, i) => `<div class="bar-row" data-key="${esc(r.key)}" title="${esc(r.label)}: ${r.n}">
+      <span class="name">${esc(r.label)}</span>
+      <span class="bar-track"><span class="bar-fill" data-w="${(r.n / max * 100).toFixed(1)}" style="background:${r.color || PALETTE[i % PALETTE.length]}"></span></span>
+      <span class="n">${r.n}</span></div>`).join("") || '<div class="empty">No data</div>';
+    requestAnimationFrame(() => requestAnimationFrame(() => el.querySelectorAll(".bar-fill").forEach(b => { b.style.width = b.dataset.w + "%"; })));
+    el.querySelectorAll(".bar-row").forEach(row => row.addEventListener("click", () => onClick(row.dataset.key)));
+  }
+
+  function renderCharts() {
+    bars($("stage-bars"), D.stages.map(s => ({ key: s.key, label: s.label, n: inv.filter(x => x.stage === s.key).length, color: s.hex })),
+      key => { state.stage = state.stage === key ? "" : key; $("f-stage").value = state.stage; render(); });
+    const cats = {};
+    inv.forEach(x => { const c = x.category || "Uncategorised"; cats[c] = (cats[c] || 0) + 1; });
+    bars($("cat-bars"), Object.entries(cats).sort((a, b) => b[1] - a[1]).map(([c, n]) => ({ key: c, label: c, n })),
+      key => { state.cat = state.cat === key || key === "Uncategorised" ? "" : key; $("f-cat").value = state.cat; render(); });
+  }
+
+  const pill = (x) => `<span class="pill" style="background:${x.stage_hex}1f"><span class="dot" style="background:${x.stage_hex}"></span>${esc(x.stage_label)}</span>`;
+
+  function render() {
+    const list = filtered();
+    // board
+    $("board").innerHTML = D.stages.map(s => {
+      const items = list.filter(x => x.stage === s.key);
+      return `<div class="col"><div class="col-h"><span class="pill" style="background:${s.hex}1f"><span class="dot" style="background:${s.hex}"></span>${esc(s.label)}</span><span class="muted">${items.length}</span></div>
+        ${items.map(x => `<div class="icard" data-id="${x.id}" tabindex="0">
+          <div class="t">${esc(x.name)}</div>
+          <div class="s"><span class="dot" style="background:${esc(x.product_color)}"></span> ${esc(x.product)}${x.category ? " · " + esc(x.category) : ""}</div>
+          ${x.follow_up_date ? `<div class="s">⏰ Follow-up ${fmtDate(x.follow_up_date)}</div>` : ""}
+          ${x.funding_target ? `<div class="s">🎯 ${money(x.funding_target)}</div>` : ""}
+        </div>`).join("") || '<div class="empty">—</div>'}</div>`;
+    }).join("");
+    // table
+    const sorted = list.slice().sort((a, b) => {
+      const va = a[state.sort], vb = b[state.sort];
+      if (va == null || va === "") return 1; if (vb == null || vb === "") return -1;
+      return (typeof va === "number" ? va - vb : String(va).localeCompare(String(vb))) * state.dir;
+    });
+    $("rows").innerHTML = sorted.map(x => `<tr data-id="${x.id}">
+      <td><strong>${esc(x.name)}</strong></td><td>${esc(x.category || "—")}</td>
+      <td><span class="dot" style="background:${esc(x.product_color)}"></span> ${esc(x.product)}</td>
+      <td>${pill(x)}</td><td>${esc(x.investment_stage || "—")}</td>
+      <td>${fmtDate(x.meeting_date)}</td><td>${fmtDate(x.follow_up_date)}</td>
+      <td class="num">${money(x.funding_target)}</td><td class="num">${money(x.funding_discussed)}</td></tr>`).join("") ||
+      '<tr><td colspan="9" class="empty">No investors match these filters.</td></tr>';
+    document.querySelectorAll("[data-id]").forEach(el => {
+      el.addEventListener("click", () => openDrawer(Number(el.dataset.id)));
+      el.addEventListener("keydown", (e) => { if (e.key === "Enter") openDrawer(Number(el.dataset.id)); });
+    });
+  }
+
+  function row(label, value, full) {
+    if (!value || value === "—") return "";  // hide empty fields for a cleaner panel
+    return `<div class="${full ? "full" : ""}"><dt>${esc(label)}</dt><dd>${value}</dd></div>`;
+  }
+  function openDrawer(id) {
+    const x = inv.find(i => i.id === id); if (!x) return;
+    $("d-name").textContent = x.name;
+    $("d-sub").innerHTML = pill(x) + ` <span class="muted small">· ${esc(x.product)}${x.category ? " · " + esc(x.category) : ""}</span>`;
+    const link = (u) => u ? `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(u.replace(/^https?:\/\//, "").slice(0, 46))}</a>` : "";
+    let html = '<dl class="dl">' +
+      row("Website", link(x.website)) + row("Invests at", esc(x.investment_stage)) +
+      row("Verified investment range", esc(x.investment_range)) + row("Industry focus", esc(x.industry_focus)) +
+      row("Investment thesis", esc(x.thesis), true) +
+      row("Contact person", esc(x.contact_person)) + (D.include_private ? row("Contact email", x.contact_email ? `<a href="mailto:${esc(x.contact_email)}">${esc(x.contact_email)}</a>` : "") : "") +
+      row("Introduction source", esc(x.introduction_source)) + row("Relationship owner", esc(x.owner)) +
+      row("Meeting", fmtDate(x.meeting_date)) + row("Follow-up", fmtDate(x.follow_up_date)) +
+      row("Funding target", money(x.funding_target)) + row("Funding discussed", money(x.funding_discussed)) +
+      row("Funding status", esc(x.funding_status)) + row("Pitch deck", link(x.pitch_deck_url)) +
+      row("Meeting notes", esc(x.meeting_notes).replace(/\n/g, "<br>"), true) +
+      row("Feedback", esc(x.feedback).replace(/\n/g, "<br>"), true) +
+      (D.include_private ? row("Internal notes", esc(x.notes).replace(/\n/g, "<br>"), true) : "") +
+      "</dl>";
+    if (html === '<dl class="dl"></dl>') html = '<p class="muted small">No further details recorded yet.</p>';
+    html += `<h4 style="margin:0 0 10px;font-size:14px">Interaction history</h4>`;
+    html += x.interactions.length ? '<ul class="timeline">' + x.interactions.map(i =>
+      `<li><div><strong>${esc(i.type)}</strong> <span class="muted small">· ${fmtDate(i.date)}</span></div><div class="small">${esc(i.summary)}</div>${i.next_step ? `<div class="small muted">Next: ${esc(i.next_step)}</div>` : ""}</li>`).join("") + "</ul>"
+      : '<p class="muted small">No interactions recorded.</p>';
+    $("d-body").innerHTML = html;
+    $("drawer").classList.add("open"); $("backdrop").classList.add("open"); $("drawer").setAttribute("aria-hidden", "false");
+    $("d-close").focus();
+  }
+  function closeDrawer() { $("drawer").classList.remove("open"); $("backdrop").classList.remove("open"); $("drawer").setAttribute("aria-hidden", "true"); }
+  $("d-close").addEventListener("click", closeDrawer);
+  $("backdrop").addEventListener("click", closeDrawer);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
+
+  $("q").addEventListener("input", (e) => { state.q = e.target.value; render(); });
+  [["f-stage", "stage"], ["f-cat", "cat"], ["f-product", "product"]].forEach(([id, k]) => $(id).addEventListener("change", (e) => { state[k] = e.target.value; render(); }));
+  document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => {
+    document.querySelectorAll(".seg button").forEach(x => x.classList.toggle("on", x === b));
+    state.view = b.dataset.view;
+    $("board-view").classList.toggle("hidden", state.view !== "board");
+    $("table-view").classList.toggle("hidden", state.view !== "table");
+  }));
+  document.querySelectorAll("th[data-sort]").forEach(th => th.addEventListener("click", () => {
+    const k = th.dataset.sort; state.dir = state.sort === k ? -state.dir : 1; state.sort = k; render();
+  }));
+
+  renderCharts();
+  render();
+})();
+</script>
+</body>
+</html>

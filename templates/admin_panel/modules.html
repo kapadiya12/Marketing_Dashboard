@@ -1,0 +1,28 @@
+{% extends "admin_panel/_base.html" %}
+{% block title %}Module configuration{% endblock %}
+{% block panel %}
+<div class="page-header"><div><h1>Module configuration</h1><p class="subtitle">Overview of the nine activity modules plus Tasks. Enable/disable per product on each product's settings page.</p></div></div>
+<div class="card">
+  <div class="table-responsive">
+    <table class="table align-middle table-mobile-cards">
+      <thead><tr><th>Module</th><th>Record types</th><th>Statuses</th><th>Custom fields</th><th>Enabled for</th><th>Configure</th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td data-label="Module" class="fw-semibold"><i class="bi {{ r.module.icon }} me-1 text-primary"></i>{{ r.module.label }}</td>
+          <td data-label="Record types" class="small">{% for res in r.resources %}{{ res.label_plural }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
+          <td data-label="Statuses">{{ r.statuses }}</td>
+          <td data-label="Custom fields">{{ r.custom_fields }}</td>
+          <td data-label="Enabled for" class="small">{% if r.module.key == 'tasks' %}All{% else %}{% for p in r.enabled %}<span class="product-dot" style="background:{{ p.brand_color }}" title="{{ p.name }}"></span>{% endfor %} {{ r.enabled|length }}/{{ products|length }}{% endif %}</td>
+          <td data-label="Configure" class="text-nowrap">
+            <a class="btn btn-sm btn-light border" href="{% url 'admin_panel:config_list' 'statuses' %}?resource={{ r.module.resources.0 }}">Statuses</a>
+            <a class="btn btn-sm btn-light border" href="{% url 'admin_panel:config_list' 'custom-fields' %}?resource={{ r.module.resources.0 }}">Fields</a>
+            <a class="btn btn-sm btn-light border" href="{% url 'admin_panel:table_columns' %}?resource={{ r.module.resources.0 }}">Columns</a>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

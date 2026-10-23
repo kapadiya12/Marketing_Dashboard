@@ -1,0 +1,15 @@
+{% load ui %}
+<div class="card mb-4">
+  <div class="card-header"><h3 class="card-title">Recent activity</h3></div>
+  {% for a in activity %}
+    <div class="list-row">
+      <span class="avatar avatar-sm">{{ a.user|initials }}</span>
+      <div class="flex-grow-1 min-w-0">
+        <div class="small text-truncate"><strong>{{ a.user|display_name }}</strong> {{ a.get_action_display|lower }} {% if a.resource and a.object_id and a.action != 'delete' %}<a class="fw-semibold" href="{% url 'records:detail' a.resource a.object_id %}">{{ a.object_repr }}</a>{% else %}<span class="fw-semibold">{{ a.object_repr }}</span>{% endif %}{% if a.message and a.action != 'create' %} <span class="text-muted">— {{ a.message }}</span>{% endif %}</div>
+        <div class="meta">{% if a.product %}<span class="product-dot" style="background:{{ a.product.brand_color }}"></span>{{ a.product.name }} · {% endif %}{{ a.created_at|timesince }} ago</div>
+      </div>
+    </div>
+  {% empty %}
+    {% include "components/empty_state.html" with icon="bi-activity" title="No activity yet" message="Changes to records will appear here." %}
+  {% endfor %}
+</div>

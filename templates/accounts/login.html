@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block auth_content %}
+<div class="auth-split">
+  <aside class="auth-brand">
+    <div class="d-flex align-items-center gap-2 fw-bold fs-5">
+      <span class="d-inline-grid" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#818cf8,#4f46e5);place-items:center;box-shadow:0 8px 20px rgba(79,70,229,.5)"><i class="bi bi-grid-1x2-fill"></i></span>
+      BizDev Hub
+    </div>
+    <div>
+      <h1 class="mt-4">One workspace for marketing, sales &amp; investor growth.</h1>
+      <p class="mt-3">Track listings, SEO, ads, demo days, outreach, meetings, consultants and investors across every product, with live dashboards built from your own data.</p>
+      <div class="auth-features">
+        <div class="auth-feature"><i class="bi bi-speedometer2"></i><div><strong>Live dashboards</strong><small>Every number is clickable and drills into the records behind it.</small></div></div>
+        <div class="auth-feature"><i class="bi bi-shield-lock"></i><div><strong>Product-level access</strong><small>People only see the products and modules they are assigned to.</small></div></div>
+        <div class="auth-feature"><i class="bi bi-arrow-left-right"></i><div><strong>Import &amp; export anywhere</strong><small>Excel, CSV and PDF, with templates and sample data.</small></div></div>
+      </div>
+    </div>
+    <div class="auth-chips">
+      {% for p in login_products %}<span class="auth-chip"><span class="product-dot" style="background:{{ p.brand_color }}"></span>{{ p.name }}</span>{% endfor %}
+    </div>
+  </aside>
+  <main class="auth-form">
+    <div class="auth-card">
+      <h2 class="fw-bold mb-1" style="letter-spacing:-.02em">Welcome back</h2>
+      <p class="text-muted mb-4">Sign in to continue to your workspace.</p>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="alert alert-danger small py-2"><i class="bi bi-exclamation-octagon me-1"></i>{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>{% endif %}
+        <div class="mb-3"><label class="form-label small fw-semibold" for="{{ form.username.id_for_label }}">Username</label>{{ form.username }}</div>
+        <div class="mb-2">
+          <div class="d-flex justify-content-between"><label class="form-label small fw-semibold" for="{{ form.password.id_for_label }}">Password</label>
+            <a class="small" href="{% url 'accounts:password_reset' %}">Forgot password?</a></div>
+          <div class="position-relative">{{ form.password }}
+            <button class="btn btn-sm position-absolute top-50 end-0 translate-middle-y me-1 text-muted" type="button" aria-label="Show password"
+                    onclick="var i=document.getElementById('{{ form.password.id_for_label }}');i.type=i.type==='password'?'text':'password';this.firstElementChild.classList.toggle('bi-eye');this.firstElementChild.classList.toggle('bi-eye-slash')"><i class="bi bi-eye"></i></button>
+          </div>
+        </div>
+        <input type="hidden" name="next" value="{{ next }}">
+        <button class="btn btn-primary btn-lg w-100 mt-3" type="submit">Sign in <i class="bi bi-arrow-right ms-1"></i></button>
+      </form>
+      <p class="small text-muted mt-4 mb-0"><i class="bi bi-lock me-1"></i>Protected sign-in. Repeated failed attempts are temporarily locked.</p>
+    </div>
+  </main>
+</div>
+{% endblock %}

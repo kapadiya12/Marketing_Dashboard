@@ -1,0 +1,16 @@
+{% load ui %}
+<div class="card h-100">
+  <div class="card-header"><h3 class="card-title">Upcoming deadlines & follow-ups</h3><a class="small" href="{% url 'tasks:overview' %}">View all</a></div>
+  {% for d in deadlines %}
+    <div class="list-row">
+      <div class="kpi-icon {% if d.overdue %}tone-danger{% else %}tone-warning{% endif %}" style="width:34px;height:34px;font-size:.95rem"><i class="bi {{ d.resource.icon }}"></i></div>
+      <div class="flex-grow-1 min-w-0">
+        <a class="fw-semibold d-block text-truncate" href="{{ d.object.get_absolute_url }}">{{ d.object }}</a>
+        <div class="meta"><span class="product-dot" style="background:{{ d.object.product.brand_color }}"></span>{{ d.object.product.name }} · {{ d.resource.label }} · {{ d.label }}{% if d.object.assigned_to %} · {{ d.object.assigned_to|display_name }}{% endif %}</div>
+      </div>
+      <span class="badge {% if d.overdue %}bg-danger{% else %}bg-warning text-dark{% endif %}">{% if d.overdue %}Overdue · {% endif %}{{ d.due|date:"d M" }}</span>
+    </div>
+  {% empty %}
+    {% include "components/empty_state.html" with icon="bi-calendar-check" title="No deadlines in the next 14 days" %}
+  {% endfor %}
+</div>

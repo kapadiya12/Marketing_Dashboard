@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Reports</h1><p class="subtitle">Product-wise and organization-wide reports. Only data you are permitted to see is included.</p></div></div>
+<form class="card mb-3" method="get">
+  <div class="card-body">
+    <div class="row g-2 align-items-end">
+      <div class="col-12 col-md-3"><label class="form-label small fw-semibold">Report</label>
+        <select class="form-select" name="type">{% for k, l in report_types %}<option value="{{ k }}" {% if report_type == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+      <div class="col-12 col-md-3"><label class="form-label small fw-semibold">Scope</label>
+        <select class="form-select" name="product"><option value="">All products</option>{% for p in products %}<option value="{{ p.slug }}" {% if product.pk == p.pk %}selected{% endif %}>{{ p.name }}</option>{% endfor %}</select></div>
+      <div class="col-12 col-md-2"><label class="form-label small fw-semibold">Period</label>
+        <select class="form-select" name="period" data-custom-toggle>{% for k, l in report_periods %}<option value="{{ k }}" {% if period.key == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+      <div class="col-6 col-md-2 {% if period.key != 'custom' %}d-none{% endif %}" data-custom-range><label class="form-label small fw-semibold">From</label><input class="form-control" type="date" name="start" value="{{ request.GET.start }}"></div>
+      <div class="col-6 col-md-2 {% if period.key != 'custom' %}d-none{% endif %}" data-custom-range><label class="form-label small fw-semibold">To</label><input class="form-control" type="date" name="end" value="{{ request.GET.end }}"></div>
+      <div class="col-12 col-md-2"><button class="btn btn-primary w-100"><i class="bi bi-play-fill me-1"></i>Run report</button></div>
+    </div>
+  </div>
+</form>
+
+{% if tables %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <div><h2 class="h5 mb-0">{{ title }}</h2><small class="text-muted">{{ subtitle }}</small></div>
+  <div class="btn-group btn-group-sm">
+    <a class="btn btn-outline-secondary" href="?{{ querystring }}&format=csv"><i class="bi bi-filetype-csv me-1"></i>CSV</a>
+    <a class="btn btn-outline-secondary" href="?{{ querystring }}&format=xlsx"><i class="bi bi-file-earmark-excel me-1"></i>Excel</a>
+    <a class="btn btn-outline-secondary" href="?{{ querystring }}&format=pdf"><i class="bi bi-filetype-pdf me-1"></i>PDF</a>
+  </div>
+</div>
+{% for t in tables %}
+  <div class="card mb-3">
+    <div class="card-header"><h3 class="card-title">{{ t.title }}</h3><small class="text-muted">{{ t.rows|length }} row{{ t.rows|length|pluralize }}</small></div>
+    {% if t.rows %}
+    <div class="table-responsive">
+      <table class="table table-sm table-hover">
+        <thead><tr>{% for h in t.headers %}<th>{{ h }}</th>{% endfor %}</tr></thead>
+        <tbody>{% for row in t.rows %}<tr>{% for v in row %}<td>{{ v|default_if_none:"" }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+      </table>
+    </div>
+    {% else %}{% include "components/empty_state.html" with icon="bi-table" title="No data for this selection" %}{% endif %}
+  </div>
+{% endfor %}
+{% elif request.GET.type %}
+  <div class="card">{% include "components/empty_state.html" with icon="bi-table" title="No data" %}</div>
+{% else %}
+  <div class="row g-3">
+    {% for k, l in report_types %}
+      <div class="col-12 col-md-6 col-xl-3"><a class="card h-100 text-body p-3" href="?type={{ k }}&period=month"><i class="bi bi-file-earmark-bar-graph fs-4 text-primary mb-2"></i><strong>{{ l }}</strong><small class="text-muted">Run for this month</small></a></div>
+    {% endfor %}
+  </div>
+{% endif %}
+{% endblock %}

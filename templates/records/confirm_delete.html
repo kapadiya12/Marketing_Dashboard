@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Delete {{ object }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-3"><i class="bi bi-exclamation-triangle text-danger me-2"></i>Delete permanently?</h1>
+        <p>You are about to permanently delete <strong>{{ object }}</strong> ({{ resource.label|lower }}, {{ object.product.name }}), including its attachments and custom field values.</p>
+        <p class="text-muted small">This cannot be undone. Consider archiving instead — archived records are hidden from dashboards but kept for history.</p>
+        <form method="post" class="d-flex gap-2 justify-content-end">
+          {% csrf_token %}
+          <a class="btn btn-light border" href="{{ object.get_absolute_url }}">Cancel</a>
+          <button class="btn btn-danger" type="submit">Delete permanently</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

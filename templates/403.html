@@ -1,0 +1,4 @@
+{% extends "base.html" %}
+{% block title %}Access denied{% endblock %}
+{% block content %}<div class="card mt-4">{% include "components/empty_state.html" with icon="bi-shield-lock" title="You do not have access to this page" message="If you need access, ask an administrator to update your product membership or module permissions." %}</div>{% endblock %}
+{% block auth_content %}<div class="auth-wrap"><div class="card p-4">{% include "components/empty_state.html" with icon="bi-shield-lock" title="Access denied" %}</div></div>{% endblock %}

@@ -1,0 +1,34 @@
+{% load ui %}
+{% if active_preset or request.GET.overdue == '1' or request.GET.state %}
+<div class="mb-3 d-flex flex-wrap gap-2 align-items-center">
+  <span class="small text-muted">Showing:</span>
+  {% if active_preset %}<a class="drill-chip" href="?{% query_replace preset='' sort='' %}">{{ active_preset }} <i class="bi bi-x-lg"></i></a>{% endif %}
+  {% if request.GET.overdue == '1' %}<a class="drill-chip" href="?{% query_replace overdue='' %}">Overdue only <i class="bi bi-x-lg"></i></a>{% endif %}
+  {% if request.GET.state == 'open' %}<a class="drill-chip" href="?{% query_replace state='' %}">Pending only <i class="bi bi-x-lg"></i></a>{% endif %}
+  {% if request.GET.state == 'completed' %}<a class="drill-chip" href="?{% query_replace state='' %}">Completed only <i class="bi bi-x-lg"></i></a>{% endif %}
+</div>
+{% endif %}
+{% include "components/kpi_cards.html" with cards=kpis %}
+{% if resource.key == "seo" %}{% include "seo_optimization/_updates.html" %}{% endif %}
+
+{% if charts %}
+<div class="reveal row g-3 mb-4">
+  {% for chart in charts %}
+    <div class="col-12 {% if charts|length > 1 %}col-lg-6{% endif %} {% if charts|length == 3 %}col-xl-4{% endif %}">
+      {% include "components/chart.html" %}
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if view_mode == 'board' %}
+  {% include "records/_board.html" %}
+{% elif view_mode == 'calendar' %}
+  {% include "records/_calendar.html" %}
+{% elif view_mode == 'cards' and resource.key == 'community' %}
+  {% include "records/_cards_community.html" %}
+{% elif view_mode == 'cards' %}
+  {% include "records/_cards.html" %}
+{% else %}
+  {% include "records/_table.html" %}
+{% endif %}

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block auth_content %}
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="text-center mb-4">
+      <span class="d-inline-grid mb-2" style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;place-items:center"><i class="bi bi-grid-1x2-fill fs-5"></i></span>
+      <h1 class="h4 fw-bold mb-0">BizDev Hub</h1>
+      <p class="text-muted small">Marketing & business development across all products</p>
+    </div>
+    <div class="card shadow-sm"><div class="card-body p-4">{% block auth_body %}{% endblock %}</div></div>
+  </div>
+</div>
+{% endblock %}

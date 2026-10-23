@@ -1,0 +1,30 @@
+{% load ui %}
+<div class="board" aria-label="Pipeline board">
+  {% for col in board %}
+    <div class="board-col">
+      <h6 class="mb-2"><span>{% include "components/status_badge.html" with status=col.status %}</span><span class="text-muted">{{ col.items|length }}</span></h6>
+      {% for obj in col.items %}
+        <div class="board-card">
+          <a class="row-title d-block mb-1" href="{{ obj.get_absolute_url }}">{{ obj }}</a>
+          <div class="small text-muted mb-2">
+            <span class="product-dot" style="background:{{ obj.product.brand_color }}"></span>{{ obj.product.name }}
+            {% if obj.investor_category %} · {{ obj.investor_category }}{% endif %}
+          </div>
+          {% if obj.follow_up_date %}<div class="small mb-2"><i class="bi bi-alarm me-1"></i>Follow-up {{ obj.follow_up_date|date:"d M" }}</div>{% endif %}
+          <div class="d-flex justify-content-between align-items-center gap-2">
+            {% if obj.assigned_to %}<span class="avatar avatar-sm" title="{{ obj.assigned_to|display_name }}">{{ obj.assigned_to|initials }}</span>{% else %}<span></span>{% endif %}
+            {% if can_write %}
+            <select class="form-select form-select-sm status-select" name="status" aria-label="Move to stage"
+                    hx-post="{% url 'records:status' resource.key obj.pk %}" hx-trigger="change" hx-swap="none"
+                    hx-on::after-request="if(event.detail.successful){ htmx.ajax('GET', window.location.href, {target:'#record-results', headers:{'HX-Target':'record-results'}}) }">
+              {% for s in statuses %}<option value="{{ s.key }}" data-color="{{ s.color }}" {% if s.key == obj.status %}selected{% endif %}>{{ s.label }}</option>{% endfor %}
+            </select>
+            {% endif %}
+          </div>
+        </div>
+      {% empty %}
+        <div class="small text-muted text-center py-3">No records</div>
+      {% endfor %}
+    </div>
+  {% endfor %}
+</div>

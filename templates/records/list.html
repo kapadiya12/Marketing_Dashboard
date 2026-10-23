@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}{{ resource.label_plural }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="min-w-0">
+    <nav aria-label="breadcrumb"><ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">Dashboard</a></li>
+      {% if scope_product %}<li class="breadcrumb-item"><a href="{{ scope_product.get_absolute_url }}">{{ scope_product.name }}</a></li>{% endif %}
+      <li class="breadcrumb-item active">{{ module.label }}</li>
+    </ol></nav>
+    <h1 class="d-flex align-items-center gap-2 flex-wrap"><i class="bi {{ resource.icon }} text-primary"></i>{{ resource.label_plural }}
+      {% if scope_product %}<span class="badge rounded-pill fw-normal fs-6" style="background:{{ scope_product.brand_color }}">{{ scope_product.name }}</span>{% endif %}</h1>
+    {% if module.is_activity_module %}<p class="subtitle">Module {{ module.number }} · {{ module.description }}</p>{% endif %}
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    {% if scope_product %}{% url 'products:record_export' scope_product.slug resource.key as export_path %}{% else %}{% url 'records:export' resource.key as export_path %}{% endif %}
+    {% if resource.key == 'listings' %}{% url 'listings:platform_report' as platform_url %}{% endif %}
+    {% if resource.key == 'investors' %}{% if scope_product %}{% url 'investors:product_snapshot' scope_product.slug as snapshot_path %}{% else %}{% url 'investors:snapshot' as snapshot_path %}{% endif %}{% endif %}
+    {% include "components/export_menu.html" with path=export_path label="Export (filtered)" extra_url=platform_url extra_label="Platform-wise report" snapshot_path=snapshot_path %}
+    {% if can_write %}
+      {% if resource.importable %}<a class="btn btn-outline-secondary btn-sm" href="{% if scope_product %}{% url 'products:record_import' scope_product.slug resource.key %}{% else %}{% url 'records:import' resource.key %}{% endif %}"><i class="bi bi-upload me-1"></i>Import</a>{% endif %}
+      <a class="btn btn-primary btn-sm" data-shortcut-new href="{% record_create_url resource scope_product %}" title="Shortcut: N"><i class="bi bi-plus-lg me-1"></i>Add {{ resource.label|lower }}</a>
+    {% endif %}
+  </div>
+</div>
+
+{% if module_resources|length > 1 %}
+<ul class="nav module-tabs">
+  {% for r in module_resources %}
+    <li class="nav-item"><a class="nav-link {% if r.key == resource.key %}active{% endif %}" href="{% if scope_product %}{% url 'products:records' scope_product.slug r.key %}{% else %}{% url 'records:list' r.key %}{% endif %}"><i class="bi {{ r.icon }} me-1"></i>{{ r.label_plural }}</a></li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% if resource.description %}<div class="alert alert-light border small py-2"><i class="bi bi-info-circle me-1 text-primary"></i>{{ resource.description }}</div>{% endif %}
+
+<form id="filter-form" class="card mb-3 filter-collapsible" method="get"
+      hx-get="{{ request.path }}" hx-target="#record-results" hx-trigger="change, submit, keyup changed delay:400ms from:#id_q" hx-push-url="true" hx-indicator="#results-spinner">
+  <div class="card-body py-3">
+    <div class="filter-bar">
+      <input type="hidden" name="view" value="{{ view_mode }}">
+      <input class="form-control form-control-sm search-input" type="search" name="q" id="id_q" placeholder="Search {{ resource.label_plural|lower }}…  ( / )" value="{{ request.GET.q }}">
+      <button class="btn btn-sm btn-outline-secondary filter-toggle" type="button" data-filter-toggle><i class="bi bi-sliders me-1"></i>Filters{% if filters_active %} <span class="badge rounded-pill bg-primary ms-1">on</span>{% endif %}</button>
+      {% if not scope_product and products_for_filter|length > 1 %}
+      <select class="form-select form-select-sm filter-extra" name="product" aria-label="Product">
+        <option value="">All products</option>
+        {% for p in products_for_filter %}<option value="{{ p.slug }}" {% if request.GET.product == p.slug %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+      </select>
+      {% endif %}
+      <select class="form-select form-select-sm filter-extra" name="status" aria-label="Status">
+        <option value="">Any status</option>
+        {% for s in statuses %}<option value="{{ s.key }}" {% if request.GET.status == s.key %}selected{% endif %}>{{ s.label }}</option>{% endfor %}
+      </select>
+      <select class="form-select form-select-sm filter-extra" name="assigned" aria-label="Assigned to">
+        <option value="">Anyone</option>
+        <option value="none" {% if request.GET.assigned == 'none' %}selected{% endif %}>Unassigned</option>
+        {% for u in users %}<option value="{{ u.pk }}" {% if request.GET.assigned == u.pk|stringformat:'s' %}selected{% endif %}>{{ u|display_name }}</option>{% endfor %}
+      </select>
+      {% for f in extra_filters %}
+      <select class="form-select form-select-sm filter-extra" name="{{ f.name }}" aria-label="{{ f.label }}">
+        <option value="">{{ f.label }}: any</option>
+        {% for val, lab in f.choices %}<option value="{{ val }}" {% if f.value == val|stringformat:'s' %}selected{% endif %}>{{ lab }}</option>{% endfor %}
+      </select>
+      {% endfor %}
+      <select class="form-select form-select-sm filter-extra" name="period" data-custom-toggle aria-label="Date range">
+        {% for key, label in periods %}<option value="{{ key }}" {% if period.key == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+      <input class="form-control form-control-sm filter-extra {% if period.key != 'custom' %}d-none{% endif %}" data-custom-range type="date" name="start" value="{{ request.GET.start }}" aria-label="From">
+      <input class="form-control form-control-sm filter-extra {% if period.key != 'custom' %}d-none{% endif %}" data-custom-range type="date" name="end" value="{{ request.GET.end }}" aria-label="To">
+      <select class="form-select form-select-sm filter-extra" name="state" aria-label="State">
+        <option value="">Open & closed</option>
+        <option value="open" {% if request.GET.state == 'open' %}selected{% endif %}>Pending only</option>
+        <option value="completed" {% if request.GET.state == 'completed' %}selected{% endif %}>Completed only</option>
+      </select>
+      {% if resource.due_field %}
+      <div class="form-check form-check-inline mb-0 ms-1 filter-extra">
+        <input class="form-check-input" type="checkbox" name="overdue" value="1" id="f-overdue" {% if request.GET.overdue == '1' %}checked{% endif %}>
+        <label class="form-check-label small" for="f-overdue">Overdue</label>
+      </div>
+      {% endif %}
+      <select class="form-select form-select-sm filter-extra" name="archived" aria-label="Archived">
+        <option value="active">Active</option>
+        <option value="archived" {% if request.GET.archived == 'archived' %}selected{% endif %}>Archived</option>
+        <option value="all" {% if request.GET.archived == 'all' %}selected{% endif %}>Active + archived</option>
+      </select>
+      {% if filters_active %}<a class="btn btn-link btn-sm text-decoration-none" href="{{ request.path }}?view={{ view_mode }}">Clear</a>{% endif %}
+      <span id="results-spinner" class="htmx-indicator spinner-border spinner-border-sm text-primary ms-1" role="status"></span>
+    </div>
+  </div>
+</form>
+
+<div class="d-flex justify-content-end mb-3">
+  <div class="btn-group btn-group-sm" role="group" aria-label="View">
+    <a class="btn btn-outline-secondary {% if view_mode == 'table' %}active{% endif %}" href="?{% query_replace view='table' %}"><i class="bi bi-table"></i> Table</a>
+    {% if resource.card_view %}<a class="btn btn-outline-secondary {% if view_mode == 'cards' %}active{% endif %}" href="?{% query_replace view='cards' %}">{% if resource.key == 'community' %}<i class="bi bi-chat-quote"></i> Q&amp;A view{% else %}<i class="bi bi-grid"></i> Directory{% endif %}</a>{% endif %}
+    {% if resource.board %}<a class="btn btn-outline-secondary {% if view_mode == 'board' %}active{% endif %}" href="?{% query_replace view='board' %}"><i class="bi bi-kanban"></i> Pipeline</a>{% endif %}
+    {% if resource.calendar_field %}<a class="btn btn-outline-secondary {% if view_mode == 'calendar' %}active{% endif %}" href="?{% query_replace view='calendar' %}"><i class="bi bi-calendar3"></i> Calendar</a>{% endif %}
+  </div>
+</div>
+
+<div id="record-results">
+  {% include "records/_results.html" %}
+</div>
+<p class="small text-muted mt-3"><i class="bi bi-hand-index me-1"></i>Tip: click any KPI box or chart bar to see the records behind it. Tick rows to export only those.</p>
+{% endblock %}

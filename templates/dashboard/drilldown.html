@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="min-w-0">
+    <nav aria-label="breadcrumb"><ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}{% if product %}?product={{ product.slug }}{% endif %}">Dashboard</a></li>
+      {% if product %}<li class="breadcrumb-item"><a href="{{ product.get_absolute_url }}">{{ product.name }}</a></li>{% endif %}
+      <li class="breadcrumb-item active">{{ title }}</li>
+    </ol></nav>
+    <h1>{{ title }} <span class="badge bg-light text-dark border fw-normal fs-6">{{ total }}</span></h1>
+    <p class="subtitle">{% if product %}{{ product.name }}{% else %}All products{% endif %} · Period: {{ period.label }}. Click a module to open the full, filterable list.</p>
+  </div>
+  <div class="d-flex flex-wrap gap-2 align-items-center">
+    <form class="filter-bar" method="get">
+      <input type="hidden" name="metric" value="{{ metric }}">
+      {% if drill_user %}<input type="hidden" name="user" value="{{ drill_user.pk }}">{% endif %}
+      {% if product %}<input type="hidden" name="product" value="{{ product.slug }}">{% endif %}
+      <select class="form-select form-select-sm" name="period" data-custom-toggle onchange="if(this.value!=='custom')this.form.submit()" aria-label="Date range">
+        {% for key, label in periods %}<option value="{{ key }}" {% if period.key == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+      <input class="form-control form-control-sm {% if period.key != 'custom' %}d-none{% endif %}" data-custom-range type="date" name="start" value="{{ request.GET.start }}" aria-label="From">
+      <input class="form-control form-control-sm {% if period.key != 'custom' %}d-none{% endif %}" data-custom-range type="date" name="end" value="{{ request.GET.end }}" aria-label="To">
+      <button class="btn btn-sm btn-light border {% if period.key != 'custom' %}d-none{% endif %}" data-custom-range>Apply</button>
+    </form>
+    {% include "components/export_menu.html" %}
+  </div>
+</div>
+
+{% if sections %}
+<div class="kpi-grid mb-4">
+  {% for s in sections %}
+    <a class="card kpi-card kpi-link text-body" href="{{ s.url }}">
+      <div class="kpi-icon tone-primary"><i class="bi {{ s.resource.icon }}"></i></div>
+      <div class="min-w-0 flex-grow-1"><div class="kpi-label">{{ s.resource.label_plural }}</div><div class="kpi-value">{{ s.count }}</div></div>
+      <i class="bi bi-chevron-right kpi-arrow"></i>
+    </a>
+  {% endfor %}
+</div>
+
+{% for s in sections %}
+<div class="card mb-3">
+  <div class="card-header">
+    <h3 class="card-title"><i class="bi {{ s.resource.icon }} me-1 text-primary"></i>{{ s.module.label }} — {{ s.resource.label_plural }} <span class="text-muted fw-normal">({{ s.count }})</span></h3>
+    <a class="btn btn-sm btn-outline-primary" href="{{ s.url }}">Open full list{% if s.count > 10 %} ({{ s.count }}){% endif %} <i class="bi bi-arrow-right"></i></a>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle table-mobile-cards">
+      <thead><tr><th>Record</th><th>Product</th><th>Status</th>{% if s.resource.due_field %}<th>{{ s.due_label }}</th>{% endif %}<th>Assigned to</th><th>Created</th></tr></thead>
+      <tbody>
+      {% for o in s.items %}
+        <tr data-href="{{ o.get_absolute_url }}">
+          <td data-label="Record"><a class="row-title" href="{{ o.get_absolute_url }}">{{ o|truncatechars:70 }}</a></td>
+          <td data-label="Product"><span class="product-dot" style="background:{{ o.product.brand_color }}"></span>{{ o.product.name }}</td>
+          <td data-label="Status">{% status_badge s.resource.key o.status %}</td>
+          {% if s.resource.due_field %}<td data-label="Due">{% render_cell o s.resource.due_field s.resource %}</td>{% endif %}
+          <td data-label="Assigned to">{{ o.assigned_to|display_name }}</td>
+          <td data-label="Created">{{ o.created_at|date:"d M Y" }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if s.count > 10 %}<div class="card-body py-2 border-top small text-muted">Showing 10 of {{ s.count }}. <a href="{{ s.url }}">See all</a> or use Export for the complete list.</div>{% endif %}
+</div>
+{% endfor %}
+{% else %}
+<div class="card">{% include "components/empty_state.html" with icon="bi-inbox" title="No records behind this number" message="Nothing matches for this scope and period." %}</div>
+{% endif %}
+{% endblock %}

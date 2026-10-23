@@ -1,0 +1,6 @@
+<div class="empty-state">
+  <div class="icon"><i class="bi {{ icon|default:'bi-inbox' }}"></i></div>
+  <h6 class="text-body mb-1">{{ title|default:"Nothing here yet" }}</h6>
+  {% if message %}<p class="mb-3 small">{{ message }}</p>{% endif %}
+  {% if action_url %}<a class="btn btn-primary btn-sm" href="{{ action_url }}"><i class="bi bi-plus-lg me-1"></i>{{ action_label|default:"Add" }}</a>{% endif %}
+</div>

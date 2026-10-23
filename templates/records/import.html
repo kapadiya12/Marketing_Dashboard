@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Import {{ resource.label_plural }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <nav aria-label="breadcrumb"><ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">Dashboard</a></li>
+      {% if scope_product %}<li class="breadcrumb-item"><a href="{{ scope_product.get_absolute_url }}">{{ scope_product.name }}</a></li>{% endif %}
+      <li class="breadcrumb-item"><a href="{{ records_url }}">{{ resource.label_plural }}</a></li>
+      <li class="breadcrumb-item active">Import</li>
+    </ol></nav>
+    <h1>Import {{ resource.label_plural }} from CSV</h1>
+    <p class="subtitle">Every row is validated exactly like the manual form. If any row is invalid, nothing is imported and each problem is listed.</p>
+  </div>
+</div>
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          {% include "components/form_field.html" with field=form.file wrapper_class="" %}
+          {% if scope_product %}<p class="small text-muted">Rows without a <code>product</code> value will be assigned to <strong>{{ scope_product.name }}</strong>.</p>{% endif %}
+          <button class="btn btn-primary"><i class="bi bi-upload me-1"></i>Validate & import</button>
+          <a class="btn btn-light border ms-1" href="{% url 'records:import_template' resource.key %}"><i class="bi bi-download me-1"></i>Download template</a>
+        </form>
+      </div>
+    </div>
+    {% if result and result.errors %}
+    <div class="card mt-3 border-danger">
+      <div class="card-header text-danger"><h3 class="card-title">{{ result.errors|length }} row{{ result.errors|length|pluralize }} need attention — nothing was imported</h3></div>
+      <div class="table-responsive" style="max-height:420px">
+        <table class="table table-sm">
+          <thead><tr><th style="width:80px">Row</th><th>Problem</th></tr></thead>
+          <tbody>{% for row, msg in result.errors %}<tr><td>{{ row }}</td><td class="small">{{ msg }}</td></tr>{% endfor %}</tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header"><h3 class="card-title">Expected columns</h3></div>
+      <div class="card-body small">
+        <p class="mb-2">Use these headers (order does not matter). Columns <code>id</code>, <code>created_at</code> and <code>updated_at</code> from exports are ignored; imports always create new records.</p>
+        <div class="d-flex flex-wrap gap-1 mb-3">{% for c in template_columns %}<code class="border rounded px-1">{{ c }}</code>{% endfor %}</div>
+        <ul class="mb-0 ps-3">
+          <li><code>product</code>: product slug or name.</li>
+          <li><code>status</code>: status key or label.</li>
+          <li><code>assigned_to</code>: username or email.</li>
+          <li>Related fields (platform, campaign, category): name.</li>
+          <li>Multiple values (tags, shared_products): separate with <code>;</code>.</li>
+          <li>Dates: <code>YYYY-MM-DD</code>. Yes/no fields: <code>yes</code>/<code>no</code>.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

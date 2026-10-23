@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}{{ object }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="min-w-0">
+    <nav aria-label="breadcrumb"><ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">Dashboard</a></li>
+      <li class="breadcrumb-item"><a href="{{ object.product.get_absolute_url }}">{{ object.product.name }}</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'products:records' object.product.slug resource.key %}">{{ resource.label_plural }}</a></li>
+      <li class="breadcrumb-item active">{{ object|truncatechars:40 }}</li>
+    </ol></nav>
+    <h1 class="text-break">{{ object }}</h1>
+    <p class="subtitle d-flex flex-wrap align-items-center gap-2">
+      <span id="status-badge">{% include "components/status_badge.html" with status=status_info %}</span>
+      <span><span class="product-dot" style="background:{{ object.product.brand_color }}"></span>{{ object.product.name }}</span>
+      {% for p in object.shared_products.all %}<span class="badge bg-light text-dark border">Shared: {{ p.name }}</span>{% endfor %}
+      {% if object.is_archived %}<span class="badge bg-secondary">Archived {{ object.archived_at|date:"d M Y" }}</span>{% endif %}
+    </p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    {% if can_write %}
+      <form method="post" action="{% url 'records:status' resource.key object.pk %}" class="d-flex gap-1">
+        {% csrf_token %}
+        <select class="form-select form-select-sm status-select" name="status" aria-label="Change status"
+                hx-post="{% url 'records:status' resource.key object.pk %}" hx-trigger="change" hx-target="#status-badge">
+          {% for s in statuses %}<option value="{{ s.key }}" data-color="{{ s.color }}" {% if s.key == object.status %}selected{% endif %}>{{ s.label }}</option>{% endfor %}
+        </select>
+        <noscript><button class="btn btn-sm btn-light border">Set</button></noscript>
+      </form>
+      <a class="btn btn-sm btn-primary" href="{% url 'records:edit' resource.key object.pk %}"><i class="bi bi-pencil me-1"></i>Edit</a>
+      {% if resource.key != 'tasks' %}<a class="btn btn-sm btn-outline-primary" href="{% url 'records:create' 'tasks' %}?related={{ resource.key }}:{{ object.pk }}"><i class="bi bi-plus-lg me-1"></i>Follow-up task</a>{% endif %}
+      {% if object.is_archived %}
+        <form method="post" action="{% url 'records:restore' resource.key object.pk %}">{% csrf_token %}<button class="btn btn-sm btn-light border"><i class="bi bi-arrow-counterclockwise me-1"></i>Restore</button></form>
+      {% else %}
+        <form method="post" action="{% url 'records:archive' resource.key object.pk %}" data-confirm="Archive this record? It will be hidden from active lists and dashboards.">{% csrf_token %}<button class="btn btn-sm btn-light border"><i class="bi bi-archive me-1"></i>Archive</button></form>
+      {% endif %}
+    {% endif %}
+    {% url 'records:detail_export' resource.key object.pk as detail_export_path %}
+    {% include "components/export_menu.html" with path=detail_export_path %}
+    {% if can_manage %}<a class="btn btn-sm btn-outline-danger" href="{% url 'records:delete' resource.key object.pk %}" title="Delete" aria-label="Delete"><i class="bi bi-trash"></i></a>{% endif %}
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-xl-8">
+    <div class="card mb-3">
+      <div class="card-header"><h3 class="card-title">Details</h3></div>
+      <div class="card-body">
+        <dl class="detail-grid mb-0">
+          {% for f in fields %}
+            <div><dt>{{ f.label }}</dt><dd>{% field_value object f.name resource %}</dd></div>
+          {% endfor %}
+          {% for c in custom %}
+            <div><dt>{{ c.label }}</dt><dd>{% if c.value is None or c.value == "" %}<span class="text-muted">—</span>{% elif c.type == 'url' %}<a href="{{ c.value }}" target="_blank" rel="noopener noreferrer">{{ c.value|truncatechars:40 }}</a>{% elif c.type == 'boolean' %}{{ c.value|yesno:"Yes,No" }}{% elif c.type == 'currency' %}{{ c.value|money }}{% else %}{{ c.value }}{% endif %}</dd></div>
+          {% endfor %}
+          <div><dt>Created</dt><dd>{{ object.created_at|date:"d M Y, H:i" }}{% if object.created_by %} by {{ object.created_by|display_name }}{% endif %}</dd></div>
+          <div><dt>Last updated</dt><dd>{{ object.updated_at|date:"d M Y, H:i" }}{% if object.updated_by %} by {{ object.updated_by|display_name }}{% endif %}</dd></div>
+        </dl>
+        {% if object.notes %}<hr><h6 class="small text-uppercase text-muted">Notes</h6><div class="text-break" style="white-space:pre-wrap">{{ object.notes }}</div>{% endif %}
+      </div>
+    </div>
+
+    {% for child in children %}
+    <div class="card mb-3" id="child-{{ child.spec.key }}">
+      <div class="card-header"><h3 class="card-title">{{ child.spec.label }} <span class="badge bg-light text-dark border">{{ child.items|length }}</span></h3>
+        {% if can_write %}<a class="btn btn-sm btn-light border" href="{% url 'records:child_import' resource.key object.pk child.spec.key %}"><i class="bi bi-upload me-1"></i>Import entries</a>{% endif %}</div>
+      {% if child.items %}
+      <div class="table-responsive">
+        <table class="table table-sm table-mobile-cards">
+          <thead><tr>{% for h in child.headers %}<th>{{ h }}</th>{% endfor %}<th></th></tr></thead>
+          <tbody>
+            {% for item in child.items %}
+              <tr>
+                {% for fname in child.spec.list_fields %}<td data-label="{{ fname }}">{% field_value item fname resource %}</td>{% endfor %}
+                <td class="text-end">{% if can_write %}<form method="post" action="{% url 'records:child_delete' resource.key object.pk child.spec.key item.pk %}" data-confirm="Remove this entry?">{% csrf_token %}<button class="btn btn-sm btn-link text-danger p-0" aria-label="Remove"><i class="bi bi-x-lg"></i></button></form>{% endif %}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}<div class="card-body text-muted small">No entries yet.</div>{% endif %}
+      {% if child.form %}
+      <div class="card-body border-top">
+        <form method="post" action="{% url 'records:child_add' resource.key object.pk child.spec.key %}">
+          {% csrf_token %}
+          <div class="row">{% for field in child.form %}{% include "components/form_field.html" with wrapper_class="col-md-4" %}{% endfor %}</div>
+          <button class="btn btn-sm btn-primary"><i class="bi bi-plus-lg me-1"></i>Add entry</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+
+    <div class="card mb-3" id="attachments">
+      <div class="card-header"><h3 class="card-title">Attachments & evidence</h3><span class="badge bg-light text-dark border">{{ attachments|length }}</span></div>
+      {% if attachments %}
+      <div>
+        {% for a in attachments %}
+          <div class="list-row">
+            <i class="bi {% if a.is_image %}bi-file-earmark-image{% else %}bi-file-earmark{% endif %} fs-5 text-primary"></i>
+            <div class="flex-grow-1 min-w-0">
+              <a class="fw-semibold text-break" href="{% url 'records:attachment_download' a.pk %}">{{ a.original_name }}</a>
+              <div class="meta">{{ a.size|filesizeformat }} · {{ a.uploaded_by|display_name }} · {{ a.created_at|date:"d M Y" }}{% if a.description %} · {{ a.description }}{% endif %}</div>
+            </div>
+            {% if can_write %}<form method="post" action="{% url 'records:attachment_delete' a.pk %}" data-confirm="Delete this attachment?">{% csrf_token %}<button class="btn btn-sm btn-link text-danger" aria-label="Delete attachment"><i class="bi bi-trash"></i></button></form>{% endif %}
+          </div>
+        {% endfor %}
+      </div>
+      {% else %}<div class="card-body text-muted small">No attachments yet. Upload screenshots, decks, creatives or evidence.</div>{% endif %}
+      {% if attachment_form %}
+      <div class="card-body border-top">
+        <form method="post" enctype="multipart/form-data" action="{% url 'records:attachment_upload' resource.key object.pk %}" class="row g-2 align-items-end">
+          {% csrf_token %}
+          <div class="col-md-6">{{ attachment_form.file }}</div>
+          <div class="col-md-4">{{ attachment_form.description }}</div>
+          <div class="col-md-2"><button class="btn btn-primary w-100"><i class="bi bi-upload"></i> Upload</button></div>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-12 col-xl-4">
+    {% if resource.key != 'tasks' %}
+    <div class="card mb-3">
+      <div class="card-header"><h3 class="card-title">Follow-up tasks</h3>
+        {% if can_write %}<a class="btn btn-sm btn-light border" href="{% url 'records:create' 'tasks' %}?related={{ resource.key }}:{{ object.pk }}"><i class="bi bi-plus-lg"></i></a>{% endif %}</div>
+      {% for t in tasks %}
+        <div class="list-row">
+          <div class="flex-grow-1 min-w-0">
+            <a class="fw-semibold" href="{{ t.get_absolute_url }}">{{ t.title }}</a>
+            <div class="meta">{% if t.due_date %}<span class="{% if t.is_overdue %}text-danger fw-semibold{% endif %}">Due {{ t.due_date|date:"d M" }}</span> · {% endif %}{{ t.assigned_to|display_name }}</div>
+          </div>
+          {% status_badge 'tasks' t.status %}
+        </div>
+      {% empty %}<div class="card-body small text-muted">No linked tasks.</div>{% endfor %}
+    </div>
+    {% endif %}
+    <div class="card">
+      <div class="card-header"><h3 class="card-title">Activity history</h3></div>
+      <div class="card-body">
+        <ul class="timeline">
+          {% for h in history %}
+            <li>
+              <div class="small"><strong>{{ h.user|display_name }}</strong> · {{ h.get_action_display|lower }}{% if h.message %} — {{ h.message }}{% endif %}</div>
+              {% if h.changes %}<div class="small text-muted">{% for k, v in h.changes.items %}{{ k }}: {{ v.from|default:"—" }} → {{ v.to|default:"—" }}{% if not forloop.last %}; {% endif %}{% endfor %}</div>{% endif %}
+              <div class="small text-muted">{{ h.created_at|date:"d M Y, H:i" }}</div>
+            </li>
+          {% empty %}<li class="small text-muted">No history yet.</li>{% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,46 @@
+# Render Blueprint: web service; the database is Turso (set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN).
+# Deploy: Render Dashboard -> New -> Blueprint -> pick this repository.
+services:
+  - type: web
+    name: bizdev-hub
+    runtime: python
+    plan: free
+    # Closest Render region to the Turso database (Tokyo, the Developer plan's only group).
+    region: singapore
+    buildCommand: ./build.sh
+    startCommand: gunicorn config.wsgi:application -c gunicorn.conf.py
+    healthCheckPath: /accounts/login/
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      # Turso database: `turso db show <name> --url` and `turso db tokens create <name>`.
+      # You are asked for these values when creating the Blueprint (never commit them).
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false
+      - key: DJANGO_TIME_ZONE
+        value: Asia/Kolkata
+      - key: GUNICORN_WORKERS
+        value: "2"
+      - key: FORWARDED_ALLOW_IPS
+        value: "*"
+      # First administrator, created on the first deploy if it does not exist yet.
+      # You are asked for these values when creating the Blueprint (never commit them).
+      - key: DJANGO_SUPERUSER_USERNAME
+        sync: false
+      - key: DJANGO_SUPERUSER_EMAIL
+        sync: false
+      - key: DJANGO_SUPERUSER_PASSWORD
+        sync: false
+      # Optional: set to 1 to load clearly labelled [DEMO] records on deploy.
+      - key: SEED_DEMO
+        value: "0"
+      # Optional: Fernet key for encrypting integration credentials
+      # (python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())").
+      - key: INTEGRATION_ENCRYPTION_KEY
+        sync: false

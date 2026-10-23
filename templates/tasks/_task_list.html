@@ -1,0 +1,17 @@
+{% load ui %}
+<div class="card mb-3">
+  <div class="card-header"><h3 class="card-title"><i class="bi {{ icon }} me-1 text-{{ tone }}"></i>{{ title }}</h3><span class="badge bg-light text-dark border">{{ items|length }}</span></div>
+  {% for t in items %}
+    <div class="list-row">
+      <span class="badge {% if t.priority == 'urgent' %}bg-danger{% elif t.priority == 'high' %}bg-warning text-dark{% else %}bg-light text-dark border{% endif %}">{{ t.get_priority_display }}</span>
+      <div class="flex-grow-1 min-w-0">
+        <a class="fw-semibold d-block text-truncate" href="{{ t.get_absolute_url }}">{{ t.title }}</a>
+        <div class="meta"><span class="product-dot" style="background:{{ t.product.brand_color }}"></span>{{ t.product.name }}{% if t.due_date %} · due {{ t.due_date|date:"d M" }}{% endif %}{% if t.assigned_to %} · {{ t.assigned_to|display_name }}{% endif %}</div>
+      </div>
+      <select class="form-select form-select-sm status-select" name="status" aria-label="Task status"
+              hx-post="{% url 'records:status' 'tasks' t.pk %}" hx-trigger="change" hx-swap="none">
+        {% for s in task_statuses %}<option value="{{ s.key }}" data-color="{{ s.color }}" {% if s.key == t.status %}selected{% endif %}>{{ s.label }}</option>{% endfor %}
+      </select>
+    </div>
+  {% empty %}<div class="card-body small text-muted">{{ empty }}</div>{% endfor %}
+</div>

@@ -1,0 +1,27 @@
+{% extends "admin_panel/_base.html" %}
+{% block title %}Products{% endblock %}
+{% block panel %}
+<div class="page-header"><div><h1>Products & members</h1><p class="subtitle">Product workspaces, their modules and team members.</p></div>
+  {% if is_admin %}<div class="d-flex gap-2"><a class="btn btn-outline-secondary btn-sm" href="{% url 'admin_panel:products_import' %}"><i class="bi bi-upload me-1"></i>Import products</a><a class="btn btn-primary btn-sm" href="{% url 'admin_panel:product_create' %}"><i class="bi bi-plus-lg me-1"></i>Add product</a></div>{% endif %}</div>
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle table-mobile-cards">
+      <thead><tr><th>Product</th><th>Slug</th><th>Status</th><th>Members</th><th>Order</th><th></th></tr></thead>
+      <tbody>
+      {% for p in products %}
+        <tr data-href="{% url 'admin_panel:product_edit' p.pk %}">
+          <td data-label="Product"><a class="row-title d-flex align-items-center gap-2" href="{% url 'admin_panel:product_edit' p.pk %}"><span class="product-badge" style="background:{{ p.brand_color }}">{{ p.initials }}</span>{{ p.name }}</a></td>
+          <td data-label="Slug"><code>/products/{{ p.slug }}/</code></td>
+          <td data-label="Status">{% if p.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}</td>
+          <td data-label="Members">{{ p.members }}</td>
+          <td data-label="Order">{{ p.display_order }}</td>
+          <td class="text-end"><a class="btn btn-sm btn-light border" href="{% url 'admin_panel:product_edit' p.pk %}">Manage</a></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6">{% include "components/empty_state.html" with icon="bi-boxes" title="No products" message="Add a product or run python manage.py seed_initial." %}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

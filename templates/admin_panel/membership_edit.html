@@ -1,0 +1,19 @@
+{% extends "admin_panel/_base.html" %}
+{% load ui %}
+{% block title %}Permissions{% endblock %}
+{% block panel %}
+<div class="page-header"><div>
+  <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="{% url 'admin_panel:product_edit' product.pk %}">{{ product.name }}</a></li><li class="breadcrumb-item active">{{ membership.user|display_name }}</li></ol></nav>
+  <h1>{{ membership.user|display_name }} · {{ product.name }}</h1>
+  <p class="subtitle">Role sets default module access. Override individual modules below. Levels: Read only &lt; Read & write &lt; Manage (adds permanent delete).</p></div></div>
+<form method="post">{% csrf_token %}
+  <div class="card mb-3"><div class="card-header"><h3 class="card-title">Membership</h3></div><div class="card-body"><div class="row">
+    {% for field in form %}{% include "components/form_field.html" with wrapper_class="col-md-4" %}{% endfor %}
+  </div></div></div>
+  <div class="card mb-3"><div class="card-header"><h3 class="card-title">Module permissions</h3></div><div class="card-body"><div class="row">
+    {% for field in perm_form %}{% include "components/form_field.html" with wrapper_class="col-md-6 col-xl-4" %}{% endfor %}
+  </div></div></div>
+  <button class="btn btn-primary">Save permissions</button>
+  <a class="btn btn-light border" href="{% url 'admin_panel:product_edit' product.pk %}">Cancel</a>
+</form>
+{% endblock %}

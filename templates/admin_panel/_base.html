@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-12 col-lg-3 col-xxl-2">
+    <div class="card">
+      <div class="list-group list-group-flush small">
+        <a class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'index' %}active{% endif %}" href="{% url 'admin_panel:index' %}"><i class="bi bi-house me-2"></i>Overview</a>
+        <a class="list-group-item list-group-item-action {% if 'product' in request.resolver_match.url_name or 'membership' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'admin_panel:products' %}"><i class="bi bi-boxes me-2"></i>Products & members</a>
+        {% if nav_is_admin %}
+        <a class="list-group-item list-group-item-action {% if 'user' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'admin_panel:users' %}"><i class="bi bi-people me-2"></i>Users & roles</a>
+        <a class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'modules' %}active{% endif %}" href="{% url 'admin_panel:modules' %}"><i class="bi bi-grid me-2"></i>Module configuration</a>
+        <a class="list-group-item list-group-item-action {% if request.resolver_match.kwargs.key == 'statuses' %}active{% endif %}" href="{% url 'admin_panel:config_list' 'statuses' %}"><i class="bi bi-flag me-2"></i>Statuses</a>
+        <a class="list-group-item list-group-item-action {% if request.resolver_match.kwargs.key == 'custom-fields' %}active{% endif %}" href="{% url 'admin_panel:config_list' 'custom-fields' %}"><i class="bi bi-input-cursor-text me-2"></i>Custom fields</a>
+        <a class="list-group-item list-group-item-action {% if request.resolver_match.kwargs.key == 'categories' %}active{% endif %}" href="{% url 'admin_panel:config_list' 'categories' %}"><i class="bi bi-folder me-2"></i>Categories</a>
+        <a class="list-group-item list-group-item-action {% if request.resolver_match.kwargs.key == 'tags' %}active{% endif %}" href="{% url 'admin_panel:config_list' 'tags' %}"><i class="bi bi-tags me-2"></i>Tags</a>
+        {% endif %}
+        <a class="list-group-item list-group-item-action {% if request.resolver_match.kwargs.key == 'targets' %}active{% endif %}" href="{% url 'admin_panel:config_list' 'targets' %}"><i class="bi bi-bullseye me-2"></i>Targets & KPIs</a>
+        <a class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'dashboard_layout' %}active{% endif %}" href="{% url 'admin_panel:dashboard_layout' %}"><i class="bi bi-layout-wtf me-2"></i>Dashboard layout</a>
+        {% if nav_is_admin %}
+        <a class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'table_columns' %}active{% endif %}" href="{% url 'admin_panel:table_columns' %}"><i class="bi bi-layout-three-columns me-2"></i>Table columns</a>
+        <a class="list-group-item list-group-item-action {% if request.resolver_match.kwargs.key == 'listing-platforms' %}active{% endif %}" href="{% url 'admin_panel:config_list' 'listing-platforms' %}"><i class="bi bi-globe2 me-2"></i>Listing platforms</a>
+        <a class="list-group-item list-group-item-action {% if request.resolver_match.kwargs.key == 'investor-categories' %}active{% endif %}" href="{% url 'admin_panel:config_list' 'investor-categories' %}"><i class="bi bi-bank me-2"></i>Investor categories</a>
+        <a class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'broadcast' %}active{% endif %}" href="{% url 'admin_panel:broadcast' %}"><i class="bi bi-megaphone me-2"></i>Notifications</a>
+        <a class="list-group-item list-group-item-action" href="{% url 'integrations:list' %}"><i class="bi bi-plug me-2"></i>Integrations</a>
+        <a class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'attachments' %}active{% endif %}" href="{% url 'admin_panel:attachments' %}"><i class="bi bi-paperclip me-2"></i>Attachments</a>
+        <a class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'audit' %}active{% endif %}" href="{% url 'admin_panel:audit' %}"><i class="bi bi-journal-text me-2"></i>Audit log</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-9 col-xxl-10">
+    {% block panel %}{% endblock %}
+  </div>
+</div>
+{% endblock %}

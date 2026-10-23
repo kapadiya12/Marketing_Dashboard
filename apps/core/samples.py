@@ -1,0 +1,126 @@
+"""
+Example values for import templates (keyed by import spec key). Only text-like fields are
+listed; dates, numbers, choices, products and references are generated so that every
+sample row is valid in the current installation. All sample data is fictional.
+"""
+
+SAMPLES = {
+    "listings": [
+        {"listing_url": "https://www.example-directory.com/products/your-product"},
+        {"listing_url": ""},
+    ],
+    "community": [
+        {"community": "r/procurement", "topic": "How do mid-size firms automate purchase approvals?",
+         "answer_summary": "Map the approval steps first, set amount-based limits, then automate reminders. "
+                           "We moved a 5-day approval cycle to 1 day this way.",
+         "published_url": "https://www.reddit.com/r/procurement/comments/example"},
+        {"community": "Workforce Management (Quora Space)", "topic": "What is the best way to plan rotating shifts?",
+         "answer_summary": "Explained demand-based rostering with an example.", "published_url": ""},
+    ],
+    "seo": [
+        {"keyword": "procurement software for SMEs", "landing_page_url": "https://www.example.com/procurement"},
+        {"keyword": "best AI shift scheduling tool", "landing_page_url": "https://www.example.com/shift-scheduling",
+         "ai_citation_url": ""},
+    ],
+    "advertising": [
+        {"name": "Q4 Lead Gen — Decision makers", "landing_page_url": "https://www.example.com/demo",
+         "external_campaign_id": ""},
+        {"name": "Retargeting — Website visitors", "landing_page_url": "https://www.example.com/pricing",
+         "external_campaign_id": ""},
+    ],
+    "events": [
+        {"name": "Example Startup Demo Day 2026", "organizer": "Example Incubator", "location": "Mumbai",
+         "website": "https://www.example-demoday.com", "outcomes": ""},
+        {"name": "Example SaaS Pitch Night", "organizer": "Example Founders Network", "location": "Online",
+         "website": "", "outcomes": ""},
+    ],
+    "outreach": [
+        {"company": "Example Manufacturing Pvt Ltd", "contact_name": "Asha Example", "email": "asha@example.com",
+         "industry": "Manufacturing", "lead_source": "LinkedIn research",
+         "subject": "Cutting purchase cycle time by 40%"},
+        {"company": "Example Logistics Ltd", "contact_name": "Rahul Example", "email": "rahul@example.org",
+         "industry": "Logistics", "lead_source": "Trade directory", "subject": "Quick question about your sourcing"},
+    ],
+    "email_campaigns": [
+        {"name": "Manufacturing intro sequence", "subject": "Cutting purchase cycle time",
+         "description": "3-step intro sequence for operations heads."},
+        {"name": "Follow-up after demo day", "subject": "Great meeting you", "description": ""},
+    ],
+    "leads": [
+        {"company": "Example Retail Pvt Ltd", "contact_name": "Neha Example", "email": "neha@example.com",
+         "phone": "+91 90000 00001", "job_title": "Head of Operations", "industry": "Retail",
+         "lead_source": "Website form"},
+        {"company": "Example Pharma Ltd", "contact_name": "Vikram Example", "email": "vikram@example.org",
+         "phone": "", "job_title": "Procurement Manager", "industry": "Pharma", "lead_source": "Referral"},
+    ],
+    "meetings": [
+        {"title": "Discovery call — requirements", "customer_company": "Example Industries",
+         "contact_person": "Priya Example", "contact_email": "priya@example.com",
+         "meeting_link": "https://meet.example.com/abc-defg-hij", "venue": "",
+         "agenda": "Understand current process; demo core workflow", "participants": "Priya Example; Our AE",
+         "meeting_notes": "", "requirements": "", "action_items": "", "opportunity_value": "500000"},
+        {"title": "Product demo — finance team", "customer_company": "Example Foods Ltd",
+         "contact_person": "Arjun Example", "contact_email": "", "meeting_link": "",
+         "venue": "Client office, Pune", "agenda": "Payroll module walkthrough", "participants": "",
+         "meeting_notes": "", "requirements": "", "action_items": "", "opportunity_value": ""},
+    ],
+    "consultants": [
+        {"name": "Dr. Example Mehta", "organization": "Example Advisory LLP",
+         "expertise": "Supply chain digitisation", "industry": "Manufacturing", "email": "mehta@example.com",
+         "phone": "", "profile_url": "https://www.linkedin.com/in/example-profile", "recommendations": ""},
+        {"name": "Example Kapoor", "organization": "Independent", "expertise": "HR tech & payroll compliance",
+         "industry": "HR services", "email": "", "phone": "", "profile_url": "", "recommendations": ""},
+    ],
+    "investors": [
+        {"name": "Example Ventures Fund I", "website": "https://www.example-ventures.com",
+         "investment_thesis": "Early-stage B2B SaaS in India", "industry_focus": "B2B SaaS, supply chain",
+         "investment_range": "", "contact_person": "Example Partner", "contact_email": "partner@example.com",
+         "introduction_source": "Warm intro via advisor", "pitch_deck_url": "", "meeting_notes": "",
+         "feedback": "", "funding_target": "50000000", "funding_discussed": ""},
+        {"name": "Example Angel Network", "website": "", "investment_thesis": "", "industry_focus": "HR tech",
+         "investment_range": "", "contact_person": "", "contact_email": "", "introduction_source": "Website",
+         "pitch_deck_url": "", "meeting_notes": "", "feedback": "", "funding_target": "", "funding_discussed": ""},
+    ],
+    "social": [
+        {"title": "How a manufacturer cut purchase approvals from 5 days to 1", "post_url": "https://www.linkedin.com/posts/example-1"},
+        {"title": "3 tips to plan rotating shifts without spreadsheets", "post_url": "https://www.instagram.com/p/example-2"},
+    ],
+    "tasks": [
+        {"title": "Send proposal to Example Industries", "description": "Include pricing for 50 users."},
+        {"title": "Update G2 listing screenshots", "description": ""},
+    ],
+    # Inline history entries
+    "seo:measurements": [{"ranking": "18", "source": "Google Search Console"},
+                         {"ranking": "9", "source": "Manual check"}],
+    "consultants:interactions": [{"summary": "Intro call: discussed advisory scope."},
+                                 {"summary": "Reviewed go-to-market plan."}],
+    "investors:interactions": [{"summary": "Sent teaser deck.", "next_step": "Schedule partner call"},
+                               {"summary": "Partner call held.", "next_step": "Share data room"}],
+    # Admin panel
+    "users": [{"username": "asha.example", "first_name": "Asha", "last_name": "Example",
+               "email": "asha.example@example.com", "job_title": "Marketing Manager"},
+              {"username": "rahul.example", "first_name": "Rahul", "last_name": "Example",
+               "email": "rahul.example@example.com", "job_title": "Business Development"}],
+    "products": [{"name": "Example Product", "slug": "example-product", "tagline": "Example tagline",
+                  "description": "Short description of the product.", "brand_color": "#4F46E5",
+                  "website": "https://www.example.com"},
+                 {"name": "Example Product Two", "slug": "example-product-two", "tagline": "Another tagline",
+                  "description": "", "brand_color": "#16A34A", "website": ""}],
+    "listing-platforms": [{"name": "Example Software Directory", "website_url": "https://www.example-directory.com",
+                           "description": "Example description"},
+                          {"name": "Example Review Site", "website_url": "https://reviews.example.com",
+                           "description": ""}],
+    "investor-categories": [{"name": "Example accelerators", "description": "Accelerator programmes"},
+                            {"name": "Example family offices", "description": ""}],
+    "categories": [{"name": "Example category", "color": "#6366F1"}, {"name": "Example campaign theme",
+                                                                      "color": "#16A34A"}],
+    "tags": [{"name": "example-tag", "color": "#F97316"}, {"name": "example-priority", "color": "#DC2626"}],
+    "statuses": [{"key": "waiting_on_client", "label": "Waiting on client"},
+                 {"key": "on_hold_example", "label": "On hold (example)"}],
+    "custom-fields": [{"label": "Deal size band", "key": "deal_size_band", "field_type": "Single select",
+                       "choices_text": "Small; Medium; Large", "help_text": "Rough opportunity size"},
+                      {"label": "Region", "key": "region", "field_type": "Text", "choices_text": "",
+                       "help_text": ""}],
+    "targets": [{"label": "Quarterly lead goal", "target_value": "100"},
+                {"label": "Meetings this quarter", "target_value": "30"}],
+}

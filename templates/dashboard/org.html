@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Organization dashboard{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 position-relative" style="z-index:3">
+    <div class="min-w-0">
+      <div class="small text-uppercase fw-semibold" style="letter-spacing:.08em;color:rgba(255,255,255,.65)">{% now "l, d F Y" %}</div>
+      <h1 class="mt-1">{{ greeting }}, {{ user.first_name|default:user.username }} <span class="greeting-wave">👋</span></h1>
+      <p>{% if selected_product %}Here's how <strong class="text-white">{{ selected_product.name }}</strong> is doing{% else %}Here's what's happening across your {{ all_products|length }} product{{ all_products|length|pluralize }}{% endif %} · {{ period.label }}</p>
+    </div>
+    <div class="hero-actions d-flex flex-wrap gap-2">
+      <button class="btn btn-sm btn-white" type="button" data-palette-open><i class="bi bi-plus-lg me-1"></i>Quick create</button>
+      <a class="btn btn-sm" href="{% url 'tasks:overview' %}"><i class="bi bi-calendar-check me-1"></i>My day</a>
+      <a class="btn btn-sm" href="{% url 'import_hub' %}{% if selected_product %}?product={{ selected_product.slug }}{% endif %}"><i class="bi bi-upload me-1"></i>Import</a>
+      <a class="btn btn-sm" href="{% url 'reports:index' %}"><i class="bi bi-file-earmark-bar-graph me-1"></i>Reports</a>
+    </div>
+  </div>
+  <div class="hero-stats position-relative" style="z-index:1">
+    {% for s in hero_stats %}
+      <a class="hero-stat" href="{{ s.url }}"><i class="bi {{ s.icon }}"></i><strong data-count="{{ s.value }}">{{ s.value }}</strong> {{ s.label }}</a>
+    {% endfor %}
+  </div>
+</section>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h2 class="h6 text-uppercase text-muted mb-0" style="letter-spacing:.06em">Overview</h2>
+  <form class="filter-bar" id="dash-filters" method="get" hx-get="{% url 'analytics:dashboard' %}" hx-target="#dashboard-content" hx-trigger="change" hx-push-url="true" hx-indicator="#dash-spinner">
+    <select class="form-select form-select-sm" name="product" aria-label="Product filter">
+      <option value="">All products</option>
+      {% for p in all_products %}<option value="{{ p.slug }}" {% if selected_product.pk == p.pk %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+    </select>
+    <select class="form-select form-select-sm" name="period" data-custom-toggle aria-label="Date range">
+      {% for key, label in periods %}<option value="{{ key }}" {% if period.key == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+    <input class="form-control form-control-sm {% if period.key != 'custom' %}d-none{% endif %}" data-custom-range type="date" name="start" value="{{ request.GET.start }}" aria-label="From">
+    <input class="form-control form-control-sm {% if period.key != 'custom' %}d-none{% endif %}" data-custom-range type="date" name="end" value="{{ request.GET.end }}" aria-label="To">
+    <button class="btn btn-sm btn-light border" type="button" title="Refresh" aria-label="Refresh"
+            hx-get="{% url 'analytics:dashboard' %}" hx-include="#dash-filters" hx-target="#dashboard-content"><i class="bi bi-arrow-clockwise"></i></button>
+    <span id="dash-spinner" class="htmx-indicator spinner-border spinner-border-sm text-primary"></span>
+    {% include "components/export_menu.html" %}
+  </form>
+</div>
+<div id="dashboard-content" hx-get="{% url 'analytics:dashboard' %}" hx-include="#dash-filters" hx-trigger="dashboard-refresh from:body, every 120s" hx-swap="innerHTML">
+  {% include "dashboard/_org_content.html" %}
+</div>
+{% endblock %}

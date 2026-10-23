@@ -1,0 +1,97 @@
+{% load ui %}
+<div class="page-header">
+  <div class="min-w-0">
+    <nav aria-label="breadcrumb"><ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'import_hub' %}">Import data</a></li>
+      {% for label, url in crumbs %}<li class="breadcrumb-item"><a href="{{ url }}">{{ label }}</a></li>{% endfor %}
+      <li class="breadcrumb-item active">Import</li>
+    </ol></nav>
+    <h1><i class="bi bi-upload me-2 text-primary"></i>Import {{ spec.title }}</h1>
+    <p class="subtitle">Upload a CSV or Excel file. Every row is checked exactly like the manual form. If any row has a problem, nothing is imported and each problem is listed by row number.</p>
+  </div>
+  <a class="btn btn-light border btn-sm" href="{{ spec.back_url }}"><i class="bi bi-arrow-left me-1"></i>Back</a>
+</div>
+
+{% if spec.description %}<div class="alert alert-light border small py-2"><i class="bi bi-info-circle me-1 text-primary"></i>{{ spec.description }}</div>{% endif %}
+
+<div class="row g-3 mb-3">
+  <div class="col-12 col-lg-5">
+    <div class="card h-100">
+      <div class="card-header"><h3 class="card-title"><span class="badge rounded-pill bg-primary me-2">1</span>Download a template</h3></div>
+      <div class="card-body d-grid gap-2">
+        <a class="btn btn-outline-primary text-start" href="?template=xlsx"><i class="bi bi-file-earmark-excel me-2"></i><strong>Excel template</strong> <small class="text-muted d-block">Sample rows, dropdowns for choices, and a field guide sheet</small></a>
+        <a class="btn btn-outline-secondary text-start" href="?template=csv_sample"><i class="bi bi-filetype-csv me-2"></i><strong>CSV with sample data</strong> <small class="text-muted d-block">Two example rows you can overwrite</small></a>
+        <a class="btn btn-outline-secondary text-start" href="?template=csv"><i class="bi bi-file-earmark me-2"></i><strong>Blank CSV</strong> <small class="text-muted d-block">Header row only</small></a>
+        <p class="small text-muted mb-0 mt-1"><i class="bi bi-lightbulb me-1 text-warning"></i>Rows marked <code>SAMPLE ROW</code> are skipped automatically, so leftover examples never become records.</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-7">
+    <div class="card h-100">
+      <div class="card-header"><h3 class="card-title"><span class="badge rounded-pill bg-primary me-2">2</span>Upload your file</h3></div>
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          {% include "components/form_field.html" with field=form.file wrapper_class="" %}
+          <div class="form-check mb-3">
+            {{ form.include_samples }}
+            <label class="form-check-label small" for="{{ form.include_samples.id_for_label }}">{{ form.include_samples.label }}</label>
+          </div>
+          <div class="alert alert-light border small py-2 mb-3"><i class="bi bi-magic me-1 text-primary"></i>
+            New tags and categories in your file are created automatically{% if spec.creators.status %}; new statuses are added if you manage this module{% endif %}. Other values that don't match an option keep the default, and your value is saved in the notes. You'll see a summary of every adjustment.</div>
+          <button class="btn btn-primary"><i class="bi bi-upload me-1"></i>Validate & import</button>
+        </form>
+        {% if result and result.errors %}
+        <div class="alert alert-danger mt-3 mb-0 small"><strong>{{ result.errors|length }} row{{ result.errors|length|pluralize }} need attention — nothing was imported.</strong> Fix the rows below and upload again.{% if result.skipped %} ({{ result.skipped }} sample row{{ result.skipped|pluralize }} skipped.){% endif %}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if result and result.errors %}
+<div class="card border-danger mb-3">
+  <div class="card-header text-danger"><h3 class="card-title">Problems found</h3></div>
+  <div class="table-responsive" style="max-height:420px">
+    <table class="table table-sm mb-0">
+      <thead><tr><th style="width:90px">Row</th><th>Problem</th></tr></thead>
+      <tbody>{% for row, msg in result.errors %}<tr><td class="fw-semibold">{{ row }}</td><td class="small">{{ msg }}</td></tr>{% endfor %}</tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<div class="card mb-3">
+  <div class="card-header"><h3 class="card-title">Field guide</h3><small class="text-muted">{{ guide|length }} columns · <span class="badge bg-primary">Required</span> columns must be filled</small></div>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle table-mobile-cards mb-0">
+      <thead><tr><th>Column</th><th>Field</th><th>Type</th><th>Allowed values / format</th><th>Example</th></tr></thead>
+      <tbody>
+      {% for g in guide %}
+        <tr>
+          <td data-label="Column"><code>{{ g.name }}</code> {% if g.required %}<span class="badge bg-primary">Required</span>{% elif g.has_default %}<span class="badge bg-light text-dark border" title="Filled automatically when left blank">Auto</span>{% endif %}</td>
+          <td data-label="Field">{{ g.label }}{% if g.help %}<div class="small text-muted">{{ g.help|striptags|truncatechars:90 }}</div>{% endif %}</td>
+          <td data-label="Type" class="small">{{ g.type }}</td>
+          <td data-label="Allowed" class="small" style="max-width:380px">
+            {% if g.allowed %}{% for v in g.allowed|slice:":12" %}<span class="badge bg-light text-dark border fw-normal me-1 mb-1">{{ v }}</span>{% endfor %}{% if g.allowed|length > 12 %}<span class="text-muted">+{{ g.allowed|length|add:"-12" }} more (see Excel template)</span>{% endif %}
+              {% if g.note %}<div class="text-muted">{{ g.note }}</div>{% endif %}
+            {% elif g.allowed is not None %}<span class="text-muted">None available yet — create them first</span>
+            {% else %}<span class="text-muted">Free text</span>{% endif %}
+          </td>
+          <td data-label="Example" class="small text-break">{{ g.example|default:"—"|truncatechars:60 }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><h3 class="card-title">Sample data preview</h3><small class="text-muted">What the sample template contains</small></div>
+  <div class="table-responsive">
+    <table class="table table-sm mb-0">
+      <thead><tr>{% for c in spec.columns %}<th>{{ c }}</th>{% endfor %}</tr></thead>
+      <tbody>{% for row in samples %}<tr>{% for c in spec.columns %}<td class="small text-nowrap">{{ row|get_item:c|default:""|truncatechars:40 }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+    </table>
+  </div>
+</div>

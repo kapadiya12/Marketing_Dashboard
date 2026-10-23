@@ -1,0 +1,66 @@
+{% load ui %}
+{% for section in sections %}
+  {% if section == "kpis" %}
+    {% include "components/kpi_cards.html" with cards=kpi_cards %}
+  {% elif section == "modules" %}
+    <h2 class="h6 text-uppercase text-muted mb-3" style="letter-spacing:.05em">Activity modules</h2>
+    <div class="reveal row g-3 mb-4">
+      {% for c in module_cards %}
+        <div class="col-12 col-sm-6 col-xl-4">
+          <div class="card module-card" style="--brand: {{ product.brand_color }}">
+            <div class="d-flex align-items-center gap-2">
+              <div class="module-icon"><i class="bi {{ c.module.icon }}"></i></div>
+              <div class="min-w-0"><a class="row-title d-block text-truncate" href="{% url 'products:records' product.slug c.resource.key %}">{{ c.module.number }}. {{ c.module.label }}</a>
+                <small class="text-muted">{{ c.pct }}% complete</small></div>
+              {% if c.can_write %}<div class="ms-auto d-flex gap-1">
+                <a class="btn btn-sm btn-light border" href="{% url 'products:record_import' product.slug c.resource.key %}" title="Import {{ c.resource.label_plural|lower }}" aria-label="Import {{ c.resource.label_plural|lower }}"><i class="bi bi-upload"></i></a>
+                <a class="btn btn-sm btn-light border" href="{% url 'products:record_create' product.slug c.resource.key %}" title="Add {{ c.resource.label|lower }}" aria-label="Add {{ c.resource.label|lower }}"><i class="bi bi-plus-lg"></i></a>
+              </div>{% endif %}
+            </div>
+            <div class="progress"><div class="progress-bar" data-width="{{ c.pct }}%" style="background:{{ product.brand_color }}"></div></div>
+            <div class="stats">
+              <a class="stat-link" href="{{ c.urls.total }}"><strong>{{ c.total }}</strong>tracked</a>
+              <a class="stat-link" href="{{ c.urls.completed }}"><strong class="text-success">{{ c.completed }}</strong>completed</a>
+              <a class="stat-link" href="{{ c.urls.pending }}"><strong class="text-warning">{{ c.pending }}</strong>pending</a>
+              <a class="stat-link" href="{{ c.urls.overdue }}"><strong class="{% if c.overdue %}text-danger{% endif %}">{{ c.overdue }}</strong>overdue</a>
+            </div>
+          </div>
+        </div>
+      {% empty %}
+        <div class="col-12"><div class="card">{% include "components/empty_state.html" with icon="bi-grid" title="No modules enabled" message="Enable modules for this product in the admin panel." %}</div></div>
+      {% endfor %}
+    </div>
+  {% elif section == "charts" %}
+    <div class="reveal row g-3 mb-4">
+      {% for chart in charts %}
+        <div class="col-12 col-lg-6 {% if forloop.counter > 2 %}col-xl-4{% endif %}">{% include "components/chart.html" with suffix="-product" %}</div>
+      {% endfor %}
+    </div>
+  {% elif section == "targets" %}
+    <div class="card mb-4">
+      <div class="card-header"><h3 class="card-title">Targets vs actual</h3>{% if can_manage %}<a class="btn btn-sm btn-light border" href="{% url 'admin_panel:config_create' 'targets' %}">Set target</a>{% endif %}</div>
+      {% for t in targets %}
+        {% if t.url %}<a class="list-row list-row-link" href="{{ t.url }}">{% else %}<div class="list-row">{% endif %}
+          <div class="flex-grow-1 min-w-0">
+            <div class="d-flex justify-content-between gap-2"><span class="fw-semibold">{{ t.label }}</span>
+              <small>{% if t.is_money %}{{ t.actual|money }} / {{ t.target_value|money }}{% else %}{{ t.actual }} / {{ t.target_value|floatformat:"-2" }}{% endif %}</small></div>
+            <div class="progress my-1"><div class="progress-bar {% if t.pct >= 100 %}bg-success{% endif %}" data-width="{% if t.pct > 100 %}100{% else %}{{ t.pct }}{% endif %}%"></div></div>
+            <div class="meta">{{ t.target.period_start|date:"d M" }} – {{ t.target.period_end|date:"d M Y" }} · {{ t.pct }}% achieved</div>
+          </div>
+        {% if t.url %}<i class="bi bi-chevron-right text-muted"></i></a>{% else %}</div>{% endif %}
+      {% empty %}
+        {% include "components/empty_state.html" with icon="bi-bullseye" title="No active targets" message="Targets set in the admin panel are tracked here against live data." %}
+      {% endfor %}
+    </div>
+  {% elif section == "deadlines" %}
+    <div class="reveal row g-3 mb-4">
+      <div class="col-12 col-xl-{% if 'meetings' in sections %}7{% else %}12{% endif %}">{% include "dashboard/_deadlines.html" %}</div>
+      {% if "meetings" in sections %}<div class="col-12 col-xl-5">{% include "products/_meetings.html" %}</div>{% endif %}
+    </div>
+  {% elif section == "meetings" and "deadlines" not in sections %}
+    <div class="mb-4">{% include "products/_meetings.html" %}</div>
+  {% elif section == "activity" %}
+    {% include "dashboard/_activity.html" %}
+  {% endif %}
+{% endfor %}
+<p class="small text-muted mt-3"><i class="bi bi-database-check me-1"></i>Figures calculated live from the database · {{ generated_at|date:"d M Y, H:i" }} · Period: {{ period.label }}</p>

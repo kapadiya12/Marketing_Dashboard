@@ -1,0 +1,5 @@
+# Normalise line endings; shell scripts must keep LF to run on Linux (Render).
+* text=auto
+*.sh text eol=lf
+Procfile text eol=lf
+*.bat text eol=crlf

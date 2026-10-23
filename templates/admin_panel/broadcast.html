@@ -1,0 +1,18 @@
+{% extends "admin_panel/_base.html" %}
+{% load ui %}
+{% block title %}Notifications{% endblock %}
+{% block panel %}
+<div class="page-header"><div><h1>Notifications</h1><p class="subtitle">Send an in-app announcement. Automatic reminders are created by <code>python manage.py send_reminders</code> (schedule it daily).</p></div></div>
+<div class="row g-3">
+  <div class="col-lg-6"><div class="card"><div class="card-body">
+    <form method="post">{% csrf_token %}
+      {% for field in form %}{% include "components/form_field.html" with wrapper_class="" %}{% endfor %}
+      <button class="btn btn-primary"><i class="bi bi-send me-1"></i>Send in-app notification</button>
+    </form>
+  </div></div></div>
+  <div class="col-lg-6"><div class="card"><div class="card-header"><h3 class="card-title">Recent notifications</h3></div>
+    {% for n in recent %}<div class="list-row"><i class="bi bi-circle-fill text-{{ n.level }}" style="font-size:.5rem"></i><div class="flex-grow-1 min-w-0"><div class="small fw-semibold text-truncate">{{ n.title }}</div><div class="meta">{{ n.user|display_name }} · {{ n.created_at|date:"d M, H:i" }} · {% if n.is_read %}read{% else %}unread{% endif %}</div></div></div>
+    {% empty %}<div class="card-body small text-muted">None yet.</div>{% endfor %}
+  </div></div>
+</div>
+{% endblock %}

@@ -1,0 +1,5 @@
+-r requirements.txt
+pytest>=8.2
+pytest-django>=4.8
+# Optional end-to-end browser tests (then run: playwright install chromium)
+# pytest-playwright>=0.5

@@ -1,0 +1,31 @@
+{% extends "admin_panel/_base.html" %}
+{% load ui %}
+{% block title %}Users{% endblock %}
+{% block panel %}
+<div class="page-header"><div><h1>Users & roles</h1><p class="subtitle">Super Admins are created with <code>python manage.py createsuperuser</code>.</p></div>
+  <div class="d-flex gap-2">{% include "components/export_menu.html" %}
+  <a class="btn btn-outline-secondary btn-sm" href="{% url 'admin_panel:users_import' %}"><i class="bi bi-upload me-1"></i>Import users</a>
+  <a class="btn btn-primary btn-sm" href="{% url 'admin_panel:user_create' %}"><i class="bi bi-person-plus me-1"></i>Add user</a></div></div>
+<form class="card mb-3" method="get"><div class="card-body py-2 d-flex gap-2"><input class="form-control form-control-sm" type="search" name="q" value="{{ q }}" placeholder="Search users…" aria-label="Search users"><button class="btn btn-sm btn-light border">Search</button></div></form>
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle table-mobile-cards">
+      <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Products</th><th>Status</th><th>Last login</th><th></th></tr></thead>
+      <tbody>
+      {% for u in page.object_list %}
+        <tr data-href="{% url 'admin_panel:user_edit' u.pk %}">
+          <td data-label="User"><span class="avatar avatar-sm me-1">{{ u|initials }}</span><a class="row-title" href="{% url 'admin_panel:user_edit' u.pk %}">{{ u|display_name }}</a> <small class="text-muted">@{{ u.username }}</small></td>
+          <td data-label="Email">{{ u.email }}</td>
+          <td data-label="Role">{{ u.profile.role_label|default:"Member" }}</td>
+          <td data-label="Products">{{ u.product_count }}</td>
+          <td data-label="Status">{% if u.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}</td>
+          <td data-label="Last login">{{ u.last_login|date:"d M Y"|default:"Never" }}</td>
+          <td class="text-end"><a class="btn btn-sm btn-light border" href="{% url 'admin_panel:user_edit' u.pk %}">Edit</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "components/pagination.html" %}
+</div>
+{% endblock %}

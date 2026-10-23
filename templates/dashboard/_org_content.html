@@ -1,0 +1,50 @@
+{% load ui %}
+{% if not all_products %}
+  <div class="card">{% include "components/empty_state.html" with icon="bi-boxes" title="No products available" message="You have not been assigned to any product yet. Ask an administrator to add you to a product workspace." %}</div>
+{% else %}
+{% for section in sections %}
+  {% if section == "kpis" %}
+    {% include "components/kpi_cards.html" with cards=kpi_cards %}
+  {% elif section == "charts" %}
+    <div class="reveal row g-3 mb-4">
+      {% for chart in charts %}
+        <div class="col-12 col-lg-6 {% if forloop.counter > 2 %}col-xl-4{% endif %}">{% include "components/chart.html" with suffix="-org" %}</div>
+      {% endfor %}
+    </div>
+  {% elif section == "comparison" and comparison|length > 1 %}
+    <div class="card mb-4">
+      <div class="card-header"><h3 class="card-title">Product-wise performance</h3><small class="text-muted">{{ period.label }}</small></div>
+      <div class="table-responsive">
+        <table class="table table-hover table-mobile-cards">
+          <thead><tr><th>Product</th><th>Activities</th><th>Completed</th><th>Progress</th><th>Overdue</th><th>Ad spend</th><th>Leads</th><th>Meetings</th><th>Investors</th></tr></thead>
+          <tbody>
+          {% for r in comparison %}
+            <tr data-href="{{ r.urls.dashboard }}">
+              <td data-label="Product"><a class="row-title" href="{{ r.urls.dashboard }}"><span class="product-dot" style="background:{{ r.product.brand_color }}"></span>{{ r.product.name }}</a></td>
+              <td data-label="Activities"><a class="cell-link" href="{{ r.urls.activities }}">{{ r.activities }}</a></td>
+              <td data-label="Completed"><a class="cell-link" href="{{ r.urls.completed }}">{{ r.completed }}</a></td>
+              <td data-label="Progress" style="min-width:120px"><div class="d-flex align-items-center gap-2"><div class="progress flex-grow-1"><div class="progress-bar" data-width="{{ r.pct }}%" style="background:{{ r.product.brand_color }}"></div></div><small>{{ r.pct }}%</small></div></td>
+              <td data-label="Overdue"><a class="cell-link {% if r.overdue %}text-danger fw-semibold{% endif %}" href="{{ r.urls.overdue }}">{{ r.overdue }}</a></td>
+              <td data-label="Ad spend"><a class="cell-link" href="{{ r.urls.ad_spend }}">{{ r.ad_spend|money }}</a></td>
+              <td data-label="Leads"><a class="cell-link" href="{{ r.urls.leads }}">{{ r.leads }}</a></td>
+              <td data-label="Meetings"><a class="cell-link" href="{{ r.urls.meetings }}">{{ r.meetings }}</a></td>
+              <td data-label="Investors"><a class="cell-link" href="{{ r.urls.investors }}">{{ r.investors }}</a></td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% elif section == "deadlines" %}
+    <div class="reveal row g-3 mb-4">
+      <div class="col-12 col-xl-7">{% include "dashboard/_deadlines.html" %}</div>
+      {% if "workload" in sections %}<div class="col-12 col-xl-5">{% include "dashboard/_workload.html" %}</div>{% endif %}
+    </div>
+  {% elif section == "workload" and "deadlines" not in sections %}
+    <div class="mb-4">{% include "dashboard/_workload.html" %}</div>
+  {% elif section == "activity" %}
+    {% include "dashboard/_activity.html" %}
+  {% endif %}
+{% endfor %}
+<p class="small text-muted mt-3"><i class="bi bi-database-check me-1"></i>Figures calculated live from the database · {{ generated_at|date:"d M Y, H:i" }} · Period: {{ period.label }}</p>
+{% endif %}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}My day & follow-ups{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>My day & follow-ups</h1><p class="subtitle">{{ today|date:"l, d F Y" }}{% if product %} · {{ product.name }}{% endif %}</p></div>
+  <form class="filter-bar" method="get">
+    <select class="form-select form-select-sm" name="product" onchange="this.form.submit()" aria-label="Product">
+      <option value="">All products</option>
+      {% for p in products %}<option value="{{ p.slug }}" {% if product.pk == p.pk %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+    </select>
+    <div class="btn-group btn-group-sm" role="group">
+      <a class="btn btn-outline-secondary {% if not mine %}active{% endif %}" href="?{% query_replace mine='' %}">Everyone</a>
+      <a class="btn btn-outline-secondary {% if mine %}active{% endif %}" href="?{% query_replace mine='1' %}">Assigned to me</a>
+    </div>
+    {% include "components/export_menu.html" %}
+    <a class="btn btn-outline-secondary btn-sm" href="{% if product %}{% url 'products:record_import' product.slug 'tasks' %}{% else %}{% url 'records:import' 'tasks' %}{% endif %}"><i class="bi bi-upload me-1"></i>Import tasks</a>
+    <a class="btn btn-primary btn-sm" href="{% url 'records:create' 'tasks' %}{% if product %}?product={{ product.slug }}{% endif %}"><i class="bi bi-plus-lg me-1"></i>Task</a>
+  </form>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-xl-6">
+    {% include "tasks/_task_list.html" with title="Overdue tasks" items=overdue_tasks tone="danger" icon="bi-exclamation-triangle" empty="No overdue tasks." %}
+    {% include "tasks/_task_list.html" with title="Today's tasks" items=today_tasks tone="warning" icon="bi-calendar-day" empty="Nothing due today." %}
+    {% include "tasks/_task_list.html" with title="Upcoming (7 days)" items=upcoming_tasks tone="primary" icon="bi-calendar-week" empty="No tasks due in the next 7 days." %}
+  </div>
+  <div class="col-12 col-xl-6">
+    <div class="card mb-3">
+      <div class="card-header"><h3 class="card-title"><i class="bi bi-people me-1 text-primary"></i>Today's meetings</h3></div>
+      {% for m in today_meetings %}
+        <div class="list-row"><div class="fw-bold" style="min-width:48px">{{ m.start_at|date:"H:i" }}</div>
+          <div class="flex-grow-1 min-w-0"><a class="fw-semibold" href="{{ m.get_absolute_url }}">{{ m.title }}</a><div class="meta">{{ m.customer_company }} · {{ m.product.name }}{% if m.meeting_link %} · <a href="{{ m.meeting_link }}" target="_blank" rel="noopener noreferrer">Join link</a>{% endif %}</div></div></div>
+      {% empty %}<div class="card-body small text-muted">No meetings today.</div>{% endfor %}
+    </div>
+    <div class="card mb-3">
+      <div class="card-header"><h3 class="card-title"><i class="bi bi-alarm me-1 text-warning"></i>Follow-ups due this week</h3></div>
+      {% for f in followups %}
+        <div class="list-row"><i class="bi {{ f.resource.icon }} text-primary"></i>
+          <div class="flex-grow-1 min-w-0"><a class="fw-semibold d-block text-truncate" href="{{ f.object.get_absolute_url }}">{{ f.object }}</a><div class="meta">{{ f.resource.label }} · {{ f.object.product.name }}</div></div>
+          <span class="badge bg-warning text-dark">{{ f.due|date:"D d M" }}</span></div>
+      {% empty %}<div class="card-body small text-muted">No follow-ups due in the next 7 days.</div>{% endfor %}
+    </div>
+    <div class="card mb-3">
+      <div class="card-header"><h3 class="card-title"><i class="bi bi-easel2 me-1 text-info"></i>Upcoming demo days</h3></div>
+      {% for e in upcoming_events %}
+        <div class="list-row"><div class="text-center" style="min-width:44px"><div class="fw-bold">{{ e.event_date|date:"d" }}</div><div class="meta text-uppercase">{{ e.event_date|date:"M" }}</div></div>
+          <div class="flex-grow-1 min-w-0"><a class="fw-semibold" href="{{ e.get_absolute_url }}">{{ e.name }}</a><div class="meta">{{ e.organizer }} · {{ e.product.name }}{% if e.registration_deadline %} · Register by {{ e.registration_deadline|date:"d M" }}{% endif %}</div></div>
+          {% status_badge 'events' e.status %}</div>
+      {% empty %}<div class="card-body small text-muted">No upcoming demo days.</div>{% endfor %}
+    </div>
+    <div class="card mb-3">
+      <div class="card-header"><h3 class="card-title"><i class="bi bi-bank me-1 text-indigo"></i>Investor follow-ups</h3></div>
+      {% for i in investor_followups %}
+        <div class="list-row"><div class="flex-grow-1 min-w-0"><a class="fw-semibold" href="{{ i.get_absolute_url }}">{{ i.name }}</a><div class="meta">{{ i.product.name }}{% if i.investor_category %} · {{ i.investor_category }}{% endif %}</div></div>
+          <span class="badge {% if i.follow_up_date < today %}bg-danger{% else %}bg-light text-dark border{% endif %}">{{ i.follow_up_date|date:"d M" }}</span></div>
+      {% empty %}<div class="card-body small text-muted">No investor follow-ups due.</div>{% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Products{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Product workspaces</h1><p class="subtitle">Products you have access to.</p></div>
+  {% if nav_is_admin %}<a class="btn btn-primary btn-sm" href="{% url 'admin_panel:product_create' %}"><i class="bi bi-plus-lg me-1"></i>Add product</a>{% endif %}</div>
+<div class="reveal row g-3">
+  {% for c in cards %}
+    <div class="col-12 col-md-6 col-xl-4">
+      <a class="card h-100 text-body" href="{{ c.product.get_absolute_url }}">
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-3 mb-3">
+            {% if c.product.logo %}<img src="{{ c.product.logo.url }}" alt="" class="rounded" width="44" height="44" style="object-fit:cover">
+            {% else %}<span class="product-badge" style="background:{{ c.product.brand_color }};width:44px;height:44px">{{ c.product.initials }}</span>{% endif %}
+            <div><h2 class="h6 mb-0">{{ c.product.name }}{% if not c.product.is_active %} <span class="badge bg-secondary">Inactive</span>{% endif %}</h2><small class="text-muted">{{ c.product.tagline }}</small></div>
+          </div>
+          <div class="d-flex flex-wrap gap-3 small">
+            <span><strong>{{ c.k.activities }}</strong> activities</span>
+            <span class="text-success"><strong>{{ c.k.completed }}</strong> completed</span>
+            <span class="text-danger"><strong>{{ c.k.overdue }}</strong> overdue</span>
+          </div>
+          <div class="progress mt-2"><div class="progress-bar" data-width="{{ c.k.completion_pct }}%" style="background:{{ c.product.brand_color }}"></div></div>
+        </div>
+      </a>
+    </div>
+  {% empty %}
+    <div class="col-12"><div class="card">{% include "components/empty_state.html" with icon="bi-boxes" title="No product workspaces assigned" %}</div></div>
+  {% endfor %}
+</div>
+{% endblock %}

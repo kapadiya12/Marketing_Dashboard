@@ -1,0 +1,28 @@
+{% extends "admin_panel/_base.html" %}
+{% load ui %}
+{% block title %}Attachments{% endblock %}
+{% block panel %}
+<div class="page-header"><div><h1>Attachments</h1><p class="subtitle">All uploaded files. Downloads are permission-checked against the parent record.</p></div>
+  {% include "components/export_menu.html" %}</div>
+<form class="card mb-3" method="get"><div class="card-body py-2 d-flex gap-2"><input class="form-control form-control-sm" type="search" name="q" value="{{ q }}" placeholder="Search file names…" aria-label="Search"><button class="btn btn-sm btn-light border">Search</button></div></form>
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-sm align-middle table-mobile-cards">
+      <thead><tr><th>File</th><th>Record</th><th>Product</th><th>Size</th><th>Uploaded</th><th></th></tr></thead>
+      <tbody>
+      {% for a in page.object_list %}
+        <tr>
+          <td data-label="File" class="text-break"><a href="{% url 'records:attachment_download' a.pk %}">{{ a.original_name }}</a></td>
+          <td data-label="Record">{% if a.content_object %}<a href="{{ a.content_object.get_absolute_url }}">{{ a.content_object|truncatechars:40 }}</a>{% else %}<span class="text-muted">Deleted record</span>{% endif %}</td>
+          <td data-label="Product">{{ a.product.name|default:"—" }}</td>
+          <td data-label="Size">{{ a.size|filesizeformat }}</td>
+          <td data-label="Uploaded">{{ a.uploaded_by|display_name }} · {{ a.created_at|date:"d M Y" }}</td>
+          <td class="text-end"><form method="post" action="{% url 'records:attachment_delete' a.pk %}" data-confirm="Delete this file?">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" aria-label="Delete"><i class="bi bi-trash"></i></button></form></td>
+        </tr>
+      {% empty %}<tr><td colspan="6" class="text-muted small p-3">No attachments.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "components/pagination.html" %}
+</div>
+{% endblock %}

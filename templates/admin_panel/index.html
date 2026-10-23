@@ -1,0 +1,28 @@
+{% extends "admin_panel/_base.html" %}
+{% load ui %}
+{% block title %}Admin panel{% endblock %}
+{% block panel %}
+<div class="page-header"><div><h1>Admin panel</h1><p class="subtitle">Configure products, modules, people and dashboards. All settings are stored in the database.</p></div></div>
+{% if is_admin %}
+<div class="kpi-grid mb-4">
+  <a class="card kpi-card text-body" href="{% url 'admin_panel:products' %}"><div class="kpi-icon tone-primary"><i class="bi bi-boxes"></i></div><div><div class="kpi-label">Products</div><div class="kpi-value">{{ counts.products }}</div></div></a>
+  <a class="card kpi-card text-body" href="{% url 'admin_panel:users' %}"><div class="kpi-icon tone-info"><i class="bi bi-people"></i></div><div><div class="kpi-label">Active users</div><div class="kpi-value">{{ counts.users }}</div><div class="kpi-hint">{{ counts.memberships }} memberships</div></div></a>
+  <a class="card kpi-card text-body" href="{% url 'admin_panel:config_list' 'custom-fields' %}"><div class="kpi-icon tone-purple"><i class="bi bi-input-cursor-text"></i></div><div><div class="kpi-label">Custom fields</div><div class="kpi-value">{{ counts.custom_fields }}</div></div></a>
+  <a class="card kpi-card text-body" href="{% url 'admin_panel:config_list' 'targets' %}"><div class="kpi-icon tone-success"><i class="bi bi-bullseye"></i></div><div><div class="kpi-label">Targets</div><div class="kpi-value">{{ counts.targets }}</div></div></a>
+  <a class="card kpi-card text-body" href="{% url 'admin_panel:config_list' 'listing-platforms' %}"><div class="kpi-icon tone-teal"><i class="bi bi-globe2"></i></div><div><div class="kpi-label">Listing platforms</div><div class="kpi-value">{{ counts.platforms }}</div></div></a>
+  <a class="card kpi-card text-body" href="{% url 'admin_panel:audit' %}"><div class="kpi-icon tone-secondary"><i class="bi bi-journal-text"></i></div><div><div class="kpi-label">Audit entries</div><div class="kpi-value">{{ counts.audit }}</div></div></a>
+</div>
+<div class="card">
+  <div class="card-header"><h3 class="card-title">Recent audit log</h3><a class="small" href="{% url 'admin_panel:audit' %}">View all</a></div>
+  {% for a in recent_audit %}
+    <div class="list-row"><span class="avatar avatar-sm">{{ a.user|initials }}</span>
+      <div class="flex-grow-1 min-w-0"><div class="small text-truncate"><strong>{{ a.user|display_name }}</strong> {{ a.get_action_display|lower }} {{ a.object_repr }}{% if a.message %} — <span class="text-muted">{{ a.message }}</span>{% endif %}</div>
+        <div class="meta">{{ a.created_at|date:"d M Y, H:i" }}{% if a.ip_address %} · {{ a.ip_address }}{% endif %}</div></div></div>
+  {% empty %}<div class="card-body text-muted small">No entries yet.</div>{% endfor %}
+</div>
+{% else %}
+<div class="card"><div class="card-header"><h3 class="card-title">Products you manage</h3></div>
+  {% for p in products %}<a class="list-row text-body" href="{% url 'admin_panel:product_edit' p.pk %}"><span class="product-badge" style="background:{{ p.brand_color }}">{{ p.initials }}</span><span class="flex-grow-1">{{ p.name }}</span><i class="bi bi-chevron-right"></i></a>{% endfor %}
+</div>
+{% endif %}
+{% endblock %}

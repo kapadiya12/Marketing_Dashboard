@@ -1,0 +1,58 @@
+{% load ui %}
+{% url 'analytics:dashboard' as dash_url %}
+<aside class="sidebar" aria-label="Main navigation">
+  <a class="brand" href="{{ dash_url }}">
+    <span class="brand-mark"><i class="bi bi-grid-1x2-fill"></i></span>
+    <span class="brand-text">BizDev Hub<small>Growth workspace</small></span>
+  </a>
+  <nav class="sidebar-scroll">
+    <a class="nav-link {% if request.path == dash_url %}active{% endif %}" href="{{ dash_url }}">
+      <i class="bi bi-speedometer2"></i><span class="label">Organization dashboard</span></a>
+    <a class="nav-link {% if '/tasks/' in request.path %}active{% endif %}" href="{% url 'tasks:overview' %}">
+      <i class="bi bi-calendar-check"></i><span class="label">My day & follow-ups</span></a>
+    <a class="nav-link {% if '/reports/' in request.path %}active{% endif %}" href="{% url 'reports:index' %}">
+      <i class="bi bi-file-earmark-bar-graph"></i><span class="label">Reports</span></a>
+    <a class="nav-link {% if '/import/' in request.path %}active{% endif %}" href="{% url 'import_hub' %}">
+      <i class="bi bi-upload"></i><span class="label">Import data</span></a>
+
+    <div class="nav-section">Products</div>
+    {% for p in nav_products %}
+      <a class="nav-link {% if nav_current_product and nav_current_product.pk == p.pk %}active{% endif %}" href="{{ p.get_absolute_url }}" title="{{ p.name }}">
+        <span class="product-badge" style="background:{{ p.brand_color }};width:22px;height:22px;font-size:.6rem">{{ p.initials }}</span>
+        <span class="label">{{ p.name }}</span></a>
+    {% empty %}
+      <div class="px-2 small text-secondary label">No products assigned yet.</div>
+    {% endfor %}
+
+    <div class="nav-section">Modules{% if nav_current_product %} · {{ nav_current_product.name }}{% endif %}</div>
+    {% for m in nav_modules %}
+      {% if nav_current_product %}
+        {% url 'products:records' nav_current_product.slug m.resources.0 as murl %}
+      {% else %}
+        {% url 'records:list' m.resources.0 as murl %}
+      {% endif %}
+      <a class="nav-link {% if resource and resource.module == m.key %}active{% endif %}" href="{{ murl }}" title="{{ m.label }}">
+        <i class="bi {{ m.icon }}"></i><span class="label">{{ m.number }}. {{ m.short_label }}</span></a>
+    {% endfor %}
+    <a class="nav-link {% if resource and resource.module == 'tasks' %}active{% endif %}" href="{% if nav_current_product %}{% url 'products:records' nav_current_product.slug 'tasks' %}{% else %}{% url 'records:list' 'tasks' %}{% endif %}">
+      <i class="bi bi-check2-square"></i><span class="label">Tasks</span></a>
+
+    {% if nav_can_admin_panel %}
+      <div class="nav-section">Administration</div>
+      <a class="nav-link {% if '/admin-panel/' in request.path %}active{% endif %}" href="{% url 'admin_panel:index' %}">
+        <i class="bi bi-sliders"></i><span class="label">Admin panel</span></a>
+      {% if nav_is_admin %}
+      <a class="nav-link {% if '/integrations/' in request.path %}active{% endif %}" href="{% url 'integrations:list' %}">
+        <i class="bi bi-plug"></i><span class="label">Integrations</span></a>
+      {% endif %}
+    {% endif %}
+  </nav>
+  <div class="sidebar-footer">
+    <a class="sidebar-user" href="{% url 'accounts:profile' %}" title="Profile & access">
+      <span class="avatar">{{ user|initials }}</span>
+      <span class="user-text min-w-0"><span class="d-block text-truncate fw-semibold small">{{ user|display_name }}</span><small>{{ user.profile.role_label|default:"Member" }}</small></span>
+    </a>
+    <button class="nav-link w-100 border-0 bg-transparent d-none d-lg-flex mt-1" data-sidebar-toggle type="button" aria-label="Collapse sidebar">
+      <i class="bi bi-layout-sidebar-inset"></i><span class="label">Collapse</span></button>
+  </div>
+</aside>

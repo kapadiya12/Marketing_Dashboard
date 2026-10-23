@@ -1,0 +1,19 @@
+{% load ui %}
+<div class="kpi-grid mb-4 reveal">
+  {% for card in cards %}
+    {% if card.url %}
+    <a class="card kpi-card kpi-link" href="{{ card.url }}" data-tip="View the records behind “{{ card.label }}”">
+    {% else %}
+    <div class="card kpi-card">
+    {% endif %}
+      <div class="kpi-icon tone-{{ card.tone }}"><i class="bi {{ card.icon }}"></i></div>
+      <div class="min-w-0 flex-grow-1">
+        <div class="kpi-label">{{ card.label }}</div>
+        <div class="kpi-value" {% count_attrs card %}>{{ card|kpi_value }}</div>
+        {% if card.fmt == "percent" %}<div class="kpi-meter"><span data-width="{% if card.value > 100 %}100{% else %}{{ card.value }}{% endif %}%"></span></div>{% endif %}
+        {% if card.hint %}<div class="kpi-hint">{{ card.hint }}</div>{% endif %}
+      </div>
+      {% if card.url %}<i class="bi bi-chevron-right kpi-arrow"></i>{% endif %}
+    {% if card.url %}</a>{% else %}</div>{% endif %}
+  {% endfor %}
+</div>

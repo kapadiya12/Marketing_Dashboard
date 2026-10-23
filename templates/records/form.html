@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}{% if is_create %}Add {{ resource.label|lower }}{% else %}Edit {{ object }}{% endif %}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <nav aria-label="breadcrumb"><ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">Dashboard</a></li>
+      {% if scope_product %}<li class="breadcrumb-item"><a href="{{ scope_product.get_absolute_url }}">{{ scope_product.name }}</a></li>{% endif %}
+      <li class="breadcrumb-item"><a href="{{ records_url }}">{{ resource.label_plural }}</a></li>
+      {% if object %}<li class="breadcrumb-item"><a href="{{ object.get_absolute_url }}">{{ object|truncatechars:40 }}</a></li>{% endif %}
+      <li class="breadcrumb-item active">{% if is_create %}New{% else %}Edit{% endif %}</li>
+    </ol></nav>
+    <h1>{% if is_create %}Add {{ resource.label|lower }}{% else %}Edit {{ resource.label|lower }}{% endif %}</h1>
+    {% if related %}<p class="subtitle">Linked to {{ related.resource.label|lower }}: <a href="{{ related.get_absolute_url }}">{{ related }}</a></p>{% endif %}
+  </div>
+</div>
+
+<form method="post" enctype="multipart/form-data" novalidate>
+  {% csrf_token %}
+  {% if related %}<input type="hidden" name="related" value="{{ related.resource.key }}:{{ related.pk }}">{% endif %}
+  {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="card mb-3">
+    <div class="card-header"><h3 class="card-title">Details</h3></div>
+    <div class="card-body">
+      <div class="row">
+        {% for field in form.standard_fields %}
+          {% if field.widget_type == "textarea" %}
+            {% include "components/form_field.html" with wrapper_class="col-12" %}
+          {% else %}
+            {% include "components/form_field.html" with wrapper_class="col-md-6 col-xl-4" %}
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% if form.custom_fields %}
+  <div class="card mb-3">
+    <div class="card-header"><h3 class="card-title">Additional fields</h3></div>
+    <div class="card-body"><div class="row">
+      {% for field in form.custom_fields %}{% include "components/form_field.html" with wrapper_class="col-md-6 col-xl-4" %}{% endfor %}
+    </div></div>
+  </div>
+  {% endif %}
+  <div class="d-flex flex-wrap gap-2 justify-content-end">
+    <a class="btn btn-light border" href="{% if object %}{{ object.get_absolute_url }}{% else %}{{ records_url }}{% endif %}">Cancel</a>
+    {% if is_create %}<button class="btn btn-outline-primary" type="submit" name="save_add" value="1">Save & add another</button>{% endif %}
+    <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg me-1"></i>Save</button>
+  </div>
+</form>
+{% endblock %}

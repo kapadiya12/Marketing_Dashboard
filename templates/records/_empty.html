@@ -1,0 +1,10 @@
+{% load ui %}
+{% if filters_active %}
+  {% include "components/empty_state.html" with icon="bi-funnel" title="No records match these filters" message="Try clearing filters or widening the date range." %}
+{% elif can_write %}
+  {% record_create_url resource scope_product as add_url %}
+  {% include "components/empty_state.html" with icon=resource.icon title="No records yet" message="Add the first record, or import many at once from Excel or CSV." action_url=add_url action_label="Add record" %}
+  <div class="text-center pb-4" style="margin-top:-1.5rem"><a class="btn btn-outline-primary btn-sm" href="{% if scope_product %}{% url 'products:record_import' scope_product.slug resource.key %}{% else %}{% url 'records:import' resource.key %}{% endif %}"><i class="bi bi-upload me-1"></i>Import from Excel / CSV</a></div>
+{% else %}
+  {% include "components/empty_state.html" with icon=resource.icon title="No records yet" message="Records added by your team will appear here." %}
+{% endif %}

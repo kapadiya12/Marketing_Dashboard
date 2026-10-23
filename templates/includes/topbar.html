@@ -1,0 +1,64 @@
+{% load ui %}
+<header class="topbar">
+  <button class="icon-btn d-lg-none" data-sidebar-toggle type="button" aria-label="Open menu"><i class="bi bi-list"></i></button>
+
+  <div class="dropdown product-switcher">
+    <button class="btn btn-light border dropdown-toggle d-flex align-items-center gap-2" data-bs-toggle="dropdown" aria-expanded="false" style="height:40px">
+      {% if nav_current_product %}
+        <span class="product-badge" style="background:{{ nav_current_product.brand_color }};width:22px;height:22px;font-size:.6rem">{{ nav_current_product.initials }}</span>
+        <span class="d-none d-sm-inline fw-semibold">{{ nav_current_product.name }}</span>
+      {% else %}
+        <i class="bi bi-grid-3x3-gap-fill text-primary"></i><span class="d-none d-sm-inline fw-semibold">All products</span>
+      {% endif %}
+    </button>
+    <ul class="dropdown-menu">
+      <li><a class="dropdown-item d-flex align-items-center gap-2" href="{% url 'analytics:dashboard' %}"><span class="product-badge bg-primary" style="width:22px;height:22px"><i class="bi bi-grid-3x3-gap-fill" style="font-size:.6rem"></i></span>All products</a></li>
+      <li><hr class="dropdown-divider"></li>
+      {% for p in nav_products %}
+        <li><a class="dropdown-item d-flex align-items-center gap-2 {% if nav_current_product.pk == p.pk %}active{% endif %}" href="{{ p.get_absolute_url }}">
+          <span class="product-badge" style="background:{{ p.brand_color }};width:22px;height:22px;font-size:.6rem">{{ p.initials }}</span>
+          <span><span class="d-block fw-semibold">{{ p.name }}</span><small class="text-muted">{{ p.tagline|truncatechars:40 }}</small></span></a></li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <button class="palette-trigger" type="button" data-palette-open aria-label="Search or jump to (Ctrl+K)">
+    <i class="bi bi-search"></i><span>Search or jump to…</span><span class="kbd">Ctrl K</span>
+  </button>
+
+  <div class="ms-auto d-flex align-items-center gap-2">
+    <button class="icon-btn d-sm-none" type="button" data-palette-open aria-label="Search"><i class="bi bi-search"></i></button>
+    <button class="icon-btn" type="button" data-theme-toggle title="Toggle dark mode (Shift+D)" aria-label="Toggle dark mode">
+      <i class="bi bi-moon-stars theme-icon-light"></i><i class="bi bi-sun theme-icon-dark d-none"></i>
+    </button>
+    <div class="dropdown">
+      <button class="icon-btn" data-bs-toggle="dropdown" aria-label="Notifications" aria-expanded="false" title="Notifications"
+              hx-get="{% url 'notifications:dropdown' %}" hx-target="#notif-menu" hx-trigger="click once">
+        <i class="bi bi-bell"></i>{% if nav_unread %}<span class="dot">{{ nav_unread }}</span>{% endif %}
+      </button>
+      <div class="dropdown-menu dropdown-menu-end p-0" style="width:360px;max-width:92vw" id="notif-menu">
+        <div class="p-4 text-center text-muted small"><span class="spinner-border spinner-border-sm me-2"></span>Loading…</div>
+      </div>
+    </div>
+    <div class="dropdown">
+      <button class="btn p-0 border-0 d-flex align-items-center gap-2" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Account menu">
+        <span class="avatar">{{ user|initials }}</span>
+        <span class="d-none d-md-block text-start lh-sm"><span class="d-block fw-semibold small">{{ user|display_name }}</span>
+          <small class="text-muted">{{ user.profile.role_label|default:"Member" }}</small></span>
+        <i class="bi bi-chevron-down small text-muted d-none d-md-inline"></i>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li class="px-3 py-2 small text-muted">Signed in as <strong class="text-body">{{ user.username }}</strong></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="{% url 'accounts:profile' %}"><i class="bi bi-person me-2"></i>Profile & access</a></li>
+        <li><a class="dropdown-item" href="{% url 'notifications:list' %}"><i class="bi bi-bell me-2"></i>Notifications</a></li>
+        <li><a class="dropdown-item" href="{% url 'accounts:password_change' %}"><i class="bi bi-key me-2"></i>Change password</a></li>
+        <li><button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#shortcuts"><i class="bi bi-keyboard me-2"></i>Keyboard shortcuts</button></li>
+        {% if user.is_staff %}<li><a class="dropdown-item" href="{% url 'admin:index' %}"><i class="bi bi-tools me-2"></i>Django admin</a></li>{% endif %}
+        <li><hr class="dropdown-divider"></li>
+        <li><form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}
+          <button class="dropdown-item text-danger" type="submit"><i class="bi bi-box-arrow-right me-2"></i>Sign out</button></form></li>
+      </ul>
+    </div>
+  </div>
+</header>

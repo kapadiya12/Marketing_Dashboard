@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Import data{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-upload me-2 text-primary"></i>Import data</h1>
+    <p class="subtitle">Bring in records from spreadsheets. Each template includes sample rows and a field guide.</p>
+  </div>
+  <form method="get" class="filter-bar">
+    <label class="small text-muted" for="hub-product">Import into</label>
+    <select class="form-select form-select-sm" id="hub-product" name="product" onchange="this.form.submit()">
+      <option value="">Any product (set a “product” column per row)</option>
+      {% for p in products %}<option value="{{ p.slug }}" {% if selected.pk == p.pk %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+    </select>
+  </form>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header"><h3 class="card-title">Modules{% if selected %} · {{ selected.name }}{% endif %}</h3>
+    <small class="text-muted">{% if selected %}The product column fills in automatically{% else %}Choose a product above to skip the product column{% endif %}</small></div>
+  <div class="table-responsive">
+    <table class="table align-middle table-mobile-cards mb-0">
+      <thead><tr><th>Module</th><th>Record type</th><th>Templates</th><th class="text-end">Import</th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td data-label="Module"><i class="bi {{ r.module.icon }} text-primary me-1"></i>{% if r.module.is_activity_module %}{{ r.module.number }}. {% endif %}{{ r.module.label }}</td>
+          <td data-label="Record type">{{ r.resource.label_plural }}</td>
+          <td data-label="Templates" class="text-nowrap">
+            <a class="btn btn-sm btn-light border" href="{% url 'records:import_template' r.resource.key %}?kind=xlsx{% if selected %}&product={{ selected.slug }}{% endif %}"><i class="bi bi-file-earmark-excel text-success"></i> Excel</a>
+            <a class="btn btn-sm btn-light border" href="{% url 'records:import_template' r.resource.key %}?kind=csv_sample{% if selected %}&product={{ selected.slug }}{% endif %}"><i class="bi bi-filetype-csv"></i> CSV sample</a>
+          </td>
+          <td class="text-end">
+            {% if r.can_import %}
+              <a class="btn btn-sm btn-primary" href="{% if selected %}{% url 'products:record_import' selected.slug r.resource.key %}{% else %}{% url 'records:import' r.resource.key %}{% endif %}"><i class="bi bi-upload me-1"></i>Import</a>
+            {% else %}<span class="small text-muted">No write access{% if selected %} for {{ selected.name }}{% endif %}</span>{% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4">{% include "components/empty_state.html" with icon="bi-shield-lock" title="You don't have write access to any module" %}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body small text-muted">
+    <i class="bi bi-clock-history me-1 text-primary"></i><strong>History entries</strong> (SEO measurements, consultant and investor interactions) are imported from each record's page: open the record and use “Import entries” on the history card.
+  </div>
+</div>
+
+{% if admin_imports %}
+<div class="card">
+  <div class="card-header"><h3 class="card-title">Administration</h3><small class="text-muted">Organization admins only</small></div>
+  <div class="row g-0">
+    {% for label, icon, url in admin_imports %}
+      <div class="col-12 col-md-6 col-xl-4"><a class="list-row list-row-link" href="{{ url }}"><i class="bi {{ icon }} text-primary"></i><span class="flex-grow-1">Import {{ label|lower }}</span><i class="bi bi-chevron-right text-muted"></i></a></div>
+    {% endfor %}
+    <div class="col-12 col-md-6 col-xl-4"><div class="list-row text-muted small"><i class="bi bi-people"></i>Product members: Admin panel → Products → a product → Import members</div></div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

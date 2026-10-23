@@ -1,0 +1,35 @@
+{% load ui %}
+{% if page.object_list %}
+<div class="reveal row g-3">
+  {% for obj in page.object_list %}
+    <div class="col-12 col-md-6 col-xl-4">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-start gap-3">
+            <span class="avatar" style="width:44px;height:44px">{{ obj.name|slice:":2"|upper }}</span>
+            <div class="min-w-0 flex-grow-1">
+              <a class="row-title d-block" href="{{ obj.get_absolute_url }}">{{ obj }}</a>
+              <div class="small text-muted">{{ obj.organization|default:"" }}</div>
+              <div class="mt-1">{% status_badge resource.key obj.status %}</div>
+            </div>
+          </div>
+          {% if obj.expertise %}<p class="small mt-3 mb-2"><i class="bi bi-lightbulb me-1 text-warning"></i>{{ obj.expertise }}</p>{% endif %}
+          <div class="small text-muted d-flex flex-wrap gap-3">
+            {% if obj.industry %}<span><i class="bi bi-building me-1"></i>{{ obj.industry }}</span>{% endif %}
+            <span><span class="product-dot" style="background:{{ obj.product.brand_color }}"></span>{{ obj.product.name }}</span>
+            {% if obj.last_interaction_date %}<span><i class="bi bi-clock-history me-1"></i>{{ obj.last_interaction_date|date:"d M Y" }}</span>{% endif %}
+          </div>
+        </div>
+        <div class="card-footer bg-transparent d-flex gap-2">
+          {% if obj.email %}<a class="btn btn-sm btn-light border" href="mailto:{{ obj.email }}"><i class="bi bi-envelope"></i></a>{% endif %}
+          {% if obj.profile_url %}<a class="btn btn-sm btn-light border" href="{{ obj.profile_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right"></i> Profile</a>{% endif %}
+          <a class="btn btn-sm btn-outline-primary ms-auto" href="{{ obj.get_absolute_url }}">Open</a>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+<div class="card mt-3">{% include "components/pagination.html" %}</div>
+{% else %}
+<div class="card">{% include "records/_empty.html" %}</div>
+{% endif %}

@@ -1,0 +1,20 @@
+{% load ui %}
+{% if q|length >= 2 %}
+  {% for g in groups %}
+    <div class="px-3 pt-2 pb-1 small text-uppercase text-muted fw-semibold d-flex justify-content-between">
+      <span><i class="bi {{ g.resource.icon }} me-1"></i>{{ g.resource.label_plural }}</span>
+      <a href="{% url 'records:list' g.resource.key %}?q={{ q|urlencode }}">{{ g.total }} result{{ g.total|pluralize }}</a>
+    </div>
+    {% for obj in g.items %}
+      <a class="list-row text-body" href="{{ obj.get_absolute_url }}">
+        <span class="product-dot" style="background:{{ obj.product.brand_color }}"></span>
+        <span class="flex-grow-1 text-truncate">{{ obj }}</span>
+        <small class="text-muted">{{ obj.product.name }}</small>
+      </a>
+    {% endfor %}
+  {% empty %}
+    <div class="p-3 text-muted small">No results for “{{ q }}”.</div>
+  {% endfor %}
+{% elif full %}
+  <div class="p-3 text-muted small">Type at least 2 characters.</div>
+{% endif %}

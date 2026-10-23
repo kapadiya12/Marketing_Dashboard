@@ -1,0 +1,22 @@
+{% if page.has_other_pages %}
+<nav class="d-flex flex-wrap justify-content-between align-items-center gap-2 p-3 border-top" aria-label="Pagination">
+  <small class="text-muted">Showing {{ page.start_index }}–{{ page.end_index }} of {{ page.paginator.count }}</small>
+  <ul class="pagination pagination-sm mb-0">
+    {% if page.has_previous %}
+      <li class="page-item"><a class="page-link" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page.previous_page_number }}" {% if htmx_target %}hx-get="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page.previous_page_number }}" hx-target="#{{ htmx_target }}" hx-push-url="true"{% endif %}>‹</a></li>
+    {% endif %}
+    {% for n in page.paginator.page_range %}
+      {% if n == page.number %}
+        <li class="page-item active"><span class="page-link">{{ n }}</span></li>
+      {% elif n > page.number|add:-3 and n < page.number|add:3 or n == 1 or n == page.paginator.num_pages %}
+        <li class="page-item"><a class="page-link" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ n }}" {% if htmx_target %}hx-get="?{% if querystring %}{{ querystring }}&{% endif %}page={{ n }}" hx-target="#{{ htmx_target }}" hx-push-url="true"{% endif %}>{{ n }}</a></li>
+      {% elif n == page.number|add:-3 or n == page.number|add:3 %}
+        <li class="page-item disabled"><span class="page-link">…</span></li>
+      {% endif %}
+    {% endfor %}
+    {% if page.has_next %}
+      <li class="page-item"><a class="page-link" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page.next_page_number }}" {% if htmx_target %}hx-get="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page.next_page_number }}" hx-target="#{{ htmx_target }}" hx-push-url="true"{% endif %}>›</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}

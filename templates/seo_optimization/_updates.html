@@ -1,0 +1,59 @@
+{% load ui %}
+<div class="card mb-4" id="seo-updates">
+  <div class="card-header">
+    <h3 class="card-title"><i class="bi bi-journal-text text-primary me-1"></i>SEO / GEO updates</h3>
+    <small class="text-muted">Quick progress notes for the team</small>
+  </div>
+  <div class="row g-0">
+    {% if seo_update_products %}
+    <div class="col-12 col-lg-5 border-end">
+      <form class="card-body" method="post" action="{% url 'seo:add_update' %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <label class="form-label small fw-semibold" for="seo-update-text">Write an update</label>
+        <textarea class="form-control mb-2" id="seo-update-text" name="text" rows="4" required maxlength="5000"
+                  placeholder="e.g. Published a new comparison page for 'procurement software'; ranking moved from 18 to 11. ChatGPT now mentions us for 'shift scheduling tools'."></textarea>
+        <div class="row g-2 mb-2">
+          <div class="col-sm-6">
+            {% if scope_product %}
+              <input type="hidden" name="product" value="{{ scope_product.pk }}">
+              <div class="form-control form-control-sm bg-light"><span class="product-dot" style="background:{{ scope_product.brand_color }}"></span>{{ scope_product.name }}</div>
+            {% else %}
+            <select class="form-select form-select-sm" name="product" aria-label="Product" required>
+              {% for p in seo_update_products %}<option value="{{ p.pk }}" {% if request.GET.product == p.slug %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+            </select>
+            {% endif %}
+          </div>
+          <div class="col-sm-6">
+            <select class="form-select form-select-sm" name="record" aria-label="Keyword (optional)">
+              <option value="">Keyword (optional)</option>
+              {% for k in seo_update_keywords %}<option value="{{ k.pk }}">{{ k.keyword|truncatechars:40 }}{% if not scope_product %} · {{ k.product.name }}{% endif %}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm"><i class="bi bi-send me-1"></i>Post update</button>
+      </form>
+    </div>
+    {% endif %}
+    <div class="col-12 {% if seo_update_products %}col-lg-7{% endif %}">
+      {% for u in seo_updates %}
+        <div class="list-row align-items-start">
+          <span class="avatar avatar-sm">{{ u.created_by|initials }}</span>
+          <div class="flex-grow-1 min-w-0">
+            <div class="meta"><strong class="text-body">{{ u.created_by|display_name }}</strong> · {{ u.created_at|timesince }} ago ·
+              <span class="product-dot" style="background:{{ u.product.brand_color }}"></span>{{ u.product.name }}
+              {% if u.record %} · <a href="{{ u.record.get_absolute_url }}">{{ u.record.keyword|truncatechars:40 }}</a>{% endif %}</div>
+            <div class="small mt-1" style="white-space:pre-wrap">{{ u.text }}</div>
+          </div>
+          {% if u.created_by_id == user.pk or can_manage %}
+          <form method="post" action="{% url 'seo:delete_update' u.pk %}" data-confirm="Remove this update?">{% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button class="btn btn-sm btn-link text-muted p-0" aria-label="Remove update"><i class="bi bi-x-lg"></i></button></form>
+          {% endif %}
+        </div>
+      {% empty %}
+        {% include "components/empty_state.html" with icon="bi-journal-text" title="No updates yet" message="Post the first SEO / GEO progress note." %}
+      {% endfor %}
+    </div>
+  </div>
+</div>

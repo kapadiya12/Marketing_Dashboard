@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Integrations{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Integrations</h1>
+  <p class="subtitle">Manual entry and CSV import work without any integration. A connection shows “Connected” only after a successful live test.</p></div></div>
+<div class="reveal row g-3">
+  {% for r in rows %}
+  <div class="col-12 col-md-6 col-xl-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <h2 class="h6 mb-0">{{ r.provider.label }}</h2>
+          <span class="badge {% if r.status_key == 'connected' %}bg-success{% elif r.status_key == 'error' %}bg-danger{% elif r.status_key == 'expired' %}bg-warning text-dark{% else %}bg-light text-dark border{% endif %}">{{ r.status }}</span>
+        </div>
+        <p class="small text-muted mb-2">{{ r.provider.description }}</p>
+        <p class="small mb-2"><i class="bi bi-diagram-3 me-1"></i>Feeds: {{ r.provider.feeds }}</p>
+        {% if r.config.last_tested_at %}<p class="small text-muted mb-1">Last tested {{ r.config.last_tested_at|date:"d M Y, H:i" }}</p>{% endif %}
+        {% if r.config.last_error %}<div class="alert alert-warning small py-2 mb-0">{{ r.config.last_error }}</div>{% endif %}
+      </div>
+      <div class="card-footer bg-transparent d-flex flex-wrap gap-2">
+        <a class="btn btn-sm btn-primary" href="{% url 'integrations:edit' r.provider.key %}">Configure</a>
+        {% if r.config %}
+          <form method="post" action="{% url 'integrations:test' r.provider.key %}">{% csrf_token %}<button class="btn btn-sm btn-light border">Test connection</button></form>
+          {% if r.config.has_secrets %}<form method="post" action="{% url 'integrations:disconnect' r.provider.key %}" data-confirm="Remove stored credentials?">{% csrf_token %}<button class="btn btn-sm btn-outline-danger">Remove credentials</button></form>{% endif %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

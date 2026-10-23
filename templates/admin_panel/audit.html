@@ -1,0 +1,36 @@
+{% extends "admin_panel/_base.html" %}
+{% load ui %}
+{% block title %}Audit log{% endblock %}
+{% block panel %}
+<div class="page-header"><div><h1>Audit log</h1><p class="subtitle">Record changes, configuration and permission changes, imports, exports and sign-ins.</p></div>
+  {% include "components/export_menu.html" %}</div>
+<form class="card mb-3" method="get"><div class="card-body py-2 filter-bar">
+  <input class="form-control form-control-sm search-input" type="search" name="q" value="{{ request.GET.q }}" placeholder="Search…" aria-label="Search">
+  <select class="form-select form-select-sm" name="action" aria-label="Action"><option value="">Any action</option>{% for k, l in actions %}<option value="{{ k }}" {% if request.GET.action == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  <select class="form-select form-select-sm" name="resource" aria-label="Module"><option value="">Any module</option>{% for r in resources %}<option value="{{ r.key }}" {% if request.GET.resource == r.key %}selected{% endif %}>{{ r.label_plural }}</option>{% endfor %}</select>
+  <select class="form-select form-select-sm" name="product" aria-label="Product"><option value="">Any product</option>{% for p in products %}<option value="{{ p.pk }}" {% if request.GET.product == p.pk|stringformat:'s' %}selected{% endif %}>{{ p.name }}</option>{% endfor %}</select>
+  <select class="form-select form-select-sm" name="user" aria-label="User"><option value="">Any user</option>{% for u in users %}<option value="{{ u.pk }}" {% if request.GET.user == u.pk|stringformat:'s' %}selected{% endif %}>{{ u.username }}</option>{% endfor %}</select>
+  <button class="btn btn-sm btn-light border">Filter</button>
+</div></form>
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-sm align-middle table-mobile-cards">
+      <thead><tr><th>When</th><th>User</th><th>Action</th><th>Object</th><th>Product</th><th>Details</th><th>IP</th></tr></thead>
+      <tbody>
+      {% for a in page.object_list %}
+        <tr>
+          <td data-label="When" class="text-nowrap">{{ a.created_at|date:"d M Y H:i" }}</td>
+          <td data-label="User">{{ a.user|display_name }}</td>
+          <td data-label="Action"><span class="badge bg-light text-dark border">{{ a.get_action_display }}</span></td>
+          <td data-label="Object" class="text-break">{{ a.object_repr|default:"—" }}{% if a.resource %} <small class="text-muted">({{ a.resource }})</small>{% endif %}</td>
+          <td data-label="Product">{{ a.product.name|default:"—" }}</td>
+          <td data-label="Details" class="small">{{ a.message }}{% if a.changes %}<div class="text-muted">{% for k, v in a.changes.items %}{{ k }}{% if not forloop.last %}, {% endif %}{% endfor %}</div>{% endif %}</td>
+          <td data-label="IP" class="small">{{ a.ip_address|default:"" }}</td>
+        </tr>
+      {% empty %}<tr><td colspan="7" class="text-muted small p-3">No entries.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "components/pagination.html" %}
+</div>
+{% endblock %}
