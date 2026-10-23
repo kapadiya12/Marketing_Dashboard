@@ -53,8 +53,12 @@ The backend is `config/turso_backend`: Django's SQLite backend on Turso's `libsq
 the Python functions Django's SQLite backend registers, so date grouping and filtering (`TruncMonth`,
 `__date`, `__year`, ...) are written as native SQLite date functions. Time zones use the zone's current
 UTC offset, which is exact for fixed-offset zones such as `Asia/Kolkata`. Date arithmetic with durations in a
-query (`F("end") - F("start")`) is not supported. Every query is a round trip to Turso, so host the app in a
-region close to the database.
+query (`F("end") - F("start")`) is not supported.
+
+Without a replica every query costs several round trips to Turso. Set `TURSO_REPLICA_DIR` (as `render.yaml`
+does) to keep an embedded replica per process and thread: reads are local, writes are forwarded to Turso, and
+each request starts by syncing so changes from other processes are visible. Turso rejects
+`PRAGMA legacy_alter_table`, so the backend sends it only for local files.
 
 ### PostgreSQL
 

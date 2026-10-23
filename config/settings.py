@@ -119,7 +119,9 @@ if env("TURSO_DATABASE_URL", default=""):
         "default": {
             "ENGINE": "config.turso_backend",
             "NAME": env("TURSO_DATABASE_URL"),
-            "OPTIONS": {"auth_token": env("TURSO_AUTH_TOKEN", default="")},
+            # TURSO_REPLICA_DIR: keep embedded replicas there (local reads; strongly recommended when deployed).
+            "OPTIONS": {"auth_token": env("TURSO_AUTH_TOKEN", default=""),
+                        "replica_dir": env("TURSO_REPLICA_DIR", default="")},
             "CONN_MAX_AGE": env.int("DB_CONN_MAX_AGE", default=60),
             "ATOMIC_REQUESTS": False,
         }

@@ -23,6 +23,9 @@ services:
         sync: false
       - key: TURSO_AUTH_TOKEN
         sync: false
+      # Embedded replicas: reads are local instead of a round trip to Tokyo per query.
+      - key: TURSO_REPLICA_DIR
+        value: /tmp/turso-replica
       - key: DJANGO_TIME_ZONE
         value: Asia/Kolkata
       - key: GUNICORN_WORKERS

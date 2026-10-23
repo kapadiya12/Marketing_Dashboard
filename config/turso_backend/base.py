@@ -10,21 +10,31 @@ the differences of Turso's Python driver (``libsql``) from the stdlib ``sqlite3`
 * the connection always autocommits: ``atomic()`` opens transactions with an explicit BEGIN, as on SQLite.
 
 Configure with ``ENGINE: "config.turso_backend"``, ``NAME`` set to the ``libsql://`` URL (or a local file
-path) and ``OPTIONS: {"auth_token": ...}``; other driver arguments (``sync_url``, ``timeout``) also go in OPTIONS.
+path) and ``OPTIONS: {"auth_token": ...}``; other driver arguments (``timeout``) also go in OPTIONS.
+
+Remote mode costs several network round trips per query. With ``OPTIONS["replica_dir"]`` set, each connection
+instead keeps an embedded replica in that directory: reads are local, writes are forwarded to Turso, and the
+replica syncs at the start of every request so changes made by other processes are visible.
 """
 import datetime
 import decimal
+import logging
+import os
 import re
 import sqlite3
+import threading
 import uuid
 from collections.abc import Mapping
 
 import libsql
 from django.core.exceptions import ImproperlyConfigured
+from django.core.signals import request_started
 from django.db.backends.sqlite3 import base as sqlite_base
 from django.utils.asyncio import async_unsafe
 
 from .operations import DatabaseOperations
+
+logger = logging.getLogger(__name__)
 
 
 class Database:
@@ -150,6 +160,16 @@ class DatabaseWrapper(sqlite_base.DatabaseWrapper):
     Database = Database
     ops_class = DatabaseOperations
 
+    @property
+    def is_replica(self):
+        return bool(self.settings_dict["OPTIONS"].get("replica_dir"))
+
+    @property
+    def is_remote(self):
+        """Talks to a Turso server, directly or through an embedded replica."""
+        return self.is_replica or str(self.settings_dict["NAME"]).startswith(
+            ("libsql://", "https://", "http://", "wss://", "ws://"))
+
     def get_connection_params(self):
         settings_dict = self.settings_dict
         if not settings_dict["NAME"]:
@@ -160,14 +180,23 @@ class DatabaseWrapper(sqlite_base.DatabaseWrapper):
             raise ImproperlyConfigured(f"Unknown transaction_mode {mode!r}.")
         self.transaction_mode = mode.upper() if mode else None
         self.init_commands = options.pop("init_command", "").split(";")
-        return {"database": str(settings_dict["NAME"]), "isolation_level": None, "_check_same_thread": False,
-                **options}
+        database = str(settings_dict["NAME"])
+        replica_dir = options.pop("replica_dir", None)
+        if replica_dir:
+            # One replica file per process and thread: a replica must not be shared between connections.
+            os.makedirs(replica_dir, exist_ok=True)
+            options["sync_url"] = database
+            database = os.path.join(replica_dir, f"{self.alias}-{os.getpid()}-{threading.get_ident()}.db")
+        return {"database": database, "isolation_level": None, "_check_same_thread": False, **options}
 
     @async_unsafe
     def get_new_connection(self, conn_params):
         conn = Connection(_call(Database.connect, **conn_params))
+        if self.is_replica:
+            _call(conn.connection.sync)
         conn.execute("PRAGMA foreign_keys = ON")
-        conn.execute("PRAGMA legacy_alter_table = OFF")
+        if not self.is_remote:  # a Turso server rejects this PRAGMA; it already behaves as OFF
+            conn.execute("PRAGMA legacy_alter_table = OFF")
         for init_command in self.init_commands:
             if init_command := init_command.strip():
                 conn.execute(init_command)
@@ -185,3 +214,25 @@ class DatabaseWrapper(sqlite_base.DatabaseWrapper):
         except Database.Error:
             return False
         return True
+
+    def sync_replica(self):
+        """Pull changes made through other connections into this connection's replica."""
+        if self.is_replica and self.connection is not None and not self.in_atomic_block:
+            _call(self.connection.connection.sync)
+
+
+def _sync_replicas(sender, environ=None, **kwargs):
+    from django.conf import settings
+    from django.db import connections
+
+    if environ and environ.get("PATH_INFO", "").startswith(settings.STATIC_URL):
+        return
+    for conn in connections.all(initialized_only=True):
+        if isinstance(conn, DatabaseWrapper):
+            try:
+                conn.sync_replica()
+            except Database.Error:
+                logger.warning("Turso replica sync failed; this request may see slightly old data.", exc_info=True)
+
+
+request_started.connect(_sync_replicas)
