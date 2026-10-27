@@ -5,12 +5,27 @@
 {% for section in sections %}
   {% if section == "kpis" %}
     {% include "components/kpi_cards.html" with cards=kpi_cards %}
-  {% elif section == "email" and email_marketing_enabled %}
+  {% elif section == "email" and email_marketing_box == "live" %}
     <div id="email-marketing-box" hx-get="{% url 'email_marketing:summary' %}" hx-trigger="load" hx-swap="innerHTML">
       <div class="card mb-4">
         <div class="card-header"><h3 class="card-title"><i class="bi bi-envelope-paper me-1"></i>Email marketing</h3>
-          <a class="btn btn-sm btn-primary" href="{% url 'email_marketing:open' %}" target="_blank" rel="noopener">Open email dashboard <i class="bi bi-box-arrow-up-right ms-1"></i></a></div>
+          <a class="btn btn-sm btn-primary" href="{% url 'email_marketing:open' %}">Open email dashboard <i class="bi bi-arrow-right ms-1"></i></a></div>
         <div class="p-3 small text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Loading live figures from the email system…</div>
+      </div>
+    </div>
+  {% elif section == "email" and email_marketing_box == "setup" %}
+    <div class="card mb-4" id="email-marketing-box">
+      <div class="card-header"><h3 class="card-title"><i class="bi bi-envelope-paper me-1"></i>Email marketing</h3>
+        <span class="badge text-bg-warning">Not connected yet</span></div>
+      <div class="p-3">
+        <p class="mb-2">Connect the email marketing system to see its live sent, open, click and reply figures here, and to open
+          each product's email dashboard straight from <strong>Cold Email</strong>, already signed in.</p>
+        <ol class="small text-muted mb-0">
+          <li>On the email system's Render service, add <code>DASHBOARD_LINK_SECRET</code> (32+ random characters).</li>
+          <li>On this dashboard's Render service, add <code>EMAIL_MARKETING_URL</code> (the email system's https address) and
+            <code>EMAIL_MARKETING_SECRET</code> (the same secret).</li>
+          <li>Redeploy both. This card then shows live figures. Only administrators see this message.</li>
+        </ol>
       </div>
     </div>
   {% elif section == "charts" %}

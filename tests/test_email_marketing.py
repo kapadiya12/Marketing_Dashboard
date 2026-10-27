@@ -60,23 +60,27 @@ def test_only_cold_email_writers_may_open(linked, users, products, login, client
     assert _sso_payload(login(users["member_a"]).get(reverse("email_marketing:open") + "?view=Horticulture"))["v"] == ""
 
 
-def test_link_is_off_until_configured(admin_user, products, login):
+def test_link_is_off_until_configured(admin_user, users, products, login):
     client = login(admin_user)
     assert client.get(reverse("email_marketing:open")).status_code == 404
-    assert 'id="email-marketing-box"' not in client.get(reverse("analytics:dashboard")).content.decode()
+    dash = client.get(reverse("analytics:dashboard")).content.decode()
+    assert "Not connected yet" in dash and reverse("email_marketing:summary") not in dash  # setup card for admins
     page = client.get(reverse("products:dashboard", args=["proceaze"])).content.decode()
     assert reverse("email_marketing:open") not in page
+    assert 'id="email-marketing-box"' not in login(users["member_a"]).get(reverse("analytics:dashboard")).content.decode()
 
 
 def test_cold_email_links_open_the_email_dashboard(linked, admin_user, products, login):
     client = login(admin_user)
     open_url = reverse("email_marketing:open") + "?product=proceaze"
     page = client.get(reverse("products:dashboard", args=["proceaze"])).content.decode()
-    assert page.count(f'href="{open_url}" target="_blank"') >= 2  # module card + sidebar
+    assert page.count(f'href="{open_url}"') >= 2  # module card + sidebar, in the same tab
+    assert 'target="_blank"' not in page
     records = client.get(reverse("products:records", args=["proceaze", "outreach"])).content.decode()
     assert "Open ProcEaze email dashboard" in records
     dash = client.get(reverse("analytics:dashboard")).content.decode()
     assert 'id="email-marketing-box"' in dash and reverse("email_marketing:summary") in dash
+    assert "Not connected yet" not in dash
 
 
 SUMMARY = {"generatedAt": "2026-10-27T10:00:00Z", "products": [

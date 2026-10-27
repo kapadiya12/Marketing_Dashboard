@@ -14,7 +14,7 @@
     {% if module.is_activity_module %}<p class="subtitle">Module {{ module.number }} · {{ module.description }}</p>{% endif %}
   </div>
   <div class="d-flex flex-wrap gap-2">
-    {% if module.key == "outreach" and nav_email_url %}<a class="btn btn-primary btn-sm" href="{{ nav_email_url }}" target="_blank" rel="noopener"><i class="bi bi-envelope-paper me-1"></i>Open {% if scope_product %}{{ scope_product.name }} {% endif %}email dashboard <i class="bi bi-box-arrow-up-right ms-1"></i></a>{% endif %}
+    {% if module.key == "outreach" and nav_email_url %}<a class="btn btn-primary btn-sm" href="{{ nav_email_url }}"><i class="bi bi-envelope-paper me-1"></i>Open {% if scope_product %}{{ scope_product.name }} {% endif %}email dashboard</a>{% endif %}
     {% if scope_product %}{% url 'products:record_export' scope_product.slug resource.key as export_path %}{% else %}{% url 'records:export' resource.key as export_path %}{% endif %}
     {% if resource.key == 'listings' %}{% url 'listings:platform_report' as platform_url %}{% endif %}
     {% if resource.key == 'investors' %}{% if scope_product %}{% url 'investors:product_snapshot' scope_product.slug as snapshot_path %}{% else %}{% url 'investors:snapshot' as snapshot_path %}{% endif %}{% endif %}

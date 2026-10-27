@@ -7,8 +7,7 @@
       {% if not error %}<small class="text-muted d-none d-sm-inline">Live from the email system · all time</small>{% endif %}
       <button class="btn btn-sm btn-light border" type="button" title="Refresh" aria-label="Refresh email marketing"
               hx-get="{% url 'email_marketing:summary' %}" hx-target="#email-marketing-box"><i class="bi bi-arrow-clockwise"></i></button>
-      <a class="btn btn-sm btn-primary" href="{{ email_open_url }}" target="_blank" rel="noopener">
-        Open email dashboard <i class="bi bi-box-arrow-up-right ms-1"></i></a>
+      <a class="btn btn-sm btn-primary" href="{{ email_open_url }}">Open email dashboard <i class="bi bi-arrow-right ms-1"></i></a>
     </div>
   </div>
   {% if error == "auth" %}
@@ -38,7 +37,7 @@
             <td data-label="Opened" style="min-width:120px"><div class="d-flex align-items-center gap-2"><div class="progress flex-grow-1"><div class="progress-bar" data-width="{{ r.open_rate }}%"{% if r.product %} style="background:{{ r.product.brand_color }}"{% endif %}></div></div><small>{{ r.open_rate }}%</small></div></td>
             <td data-label="Clicked">{{ r.click_rate }}%</td>
             <td data-label="Replied">{{ r.replied }}{% if r.mailed %} <small class="text-muted">({{ r.reply_rate }}%)</small>{% endif %}</td>
-            <td class="text-end">{% if r.url %}<a class="btn btn-sm btn-light border" href="{{ r.url }}" target="_blank" rel="noopener" title="Open {{ r.name }} in the email dashboard">Open <i class="bi bi-box-arrow-up-right ms-1"></i></a>{% endif %}</td>
+            <td class="text-end">{% if r.url %}<a class="btn btn-sm btn-light border" href="{{ r.url }}" title="Open {{ r.name }} in the email dashboard">Open <i class="bi bi-arrow-right ms-1"></i></a>{% endif %}</td>
           </tr>
         {% endfor %}
         </tbody>

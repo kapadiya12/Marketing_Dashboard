@@ -58,7 +58,7 @@ def navigation(request):
     email_url = email_open_url(current) if email_marketing.can_open(user, current) else None
     if email_url:
         palette.append({"group": "Go to", "label": f"Email dashboard{f' · {current.name}' if current else ''}",
-                        "hint": "Opens the email system in a new tab", "url": email_url, "icon": "bi-envelope-paper"})
+                        "hint": "Opens the email system, signed in", "url": email_url, "icon": "bi-envelope-paper"})
     manages_panel = is_org_admin(user)
     if manages_panel:
         palette += [

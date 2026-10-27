@@ -4,7 +4,7 @@ from django.http import Http404
 from django.shortcuts import render
 from django.utils import timezone
 
-from apps.accounts.permissions import accessible_products
+from apps.accounts.permissions import accessible_products, is_org_admin
 from apps.audit.models import AuditLog
 from apps.audit.services import log_action
 from apps.core import csvio
@@ -99,7 +99,9 @@ def _dashboard_context(request):
         "workload": data.team_workload(),
         "activity": data.recent_activity(),
         "sections": layout.visible_keys(sections),
-        "email_marketing_enabled": email_marketing.can_open(request.user),
+        # "live" loads the email system's figures; "setup" tells administrators how to connect it.
+        "email_marketing_box": "live" if email_marketing.can_open(request.user) else (
+            "setup" if not email_marketing.is_configured() and is_org_admin(request.user) else None),
         "generated_at": timezone.now(),
     }
 
