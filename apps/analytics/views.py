@@ -12,6 +12,7 @@ from apps.core.exporting import export_filename, export_tables, plain, requested
 from apps.core.periods import PERIODS, resolve_period
 from apps.core.statuses import get_status
 from apps.core.templatetags.ui import kpi_text
+from apps.email_marketing import access as email_marketing
 
 from . import layout
 from .reports import REPORT_PERIODS, REPORT_TYPES, build_report, csv_report, pdf_report, report_period, xlsx_report
@@ -98,6 +99,7 @@ def _dashboard_context(request):
         "workload": data.team_workload(),
         "activity": data.recent_activity(),
         "sections": layout.visible_keys(sections),
+        "email_marketing_enabled": email_marketing.can_open(request.user),
         "generated_at": timezone.now(),
     }
 

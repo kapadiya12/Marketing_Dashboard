@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     "apps.tasks",
     "apps.analytics",
     "apps.integrations",
+    "apps.email_marketing",
     "apps.admin_panel",
     "apps.api",
     # Nine activity modules
@@ -204,6 +205,14 @@ EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=False)
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="dashboard@localhost")
 
 INTEGRATION_ENCRYPTION_KEY = env("INTEGRATION_ENCRYPTION_KEY", default="")
+
+# Email marketing system (Outreach Console): one-click sign-in from Cold Email and the main dashboard's
+# "Email marketing" box. The secret must equal DASHBOARD_LINK_SECRET there (32+ characters).
+EMAIL_MARKETING_URL = env("EMAIL_MARKETING_URL", default="").rstrip("/")
+EMAIL_MARKETING_SECRET = env("EMAIL_MARKETING_SECRET", default="")
+EMAIL_MARKETING_TIMEOUT = env.int("EMAIL_MARKETING_TIMEOUT", default=12)
+# Dashboard product slug -> email system product name, only where the names differ.
+EMAIL_MARKETING_PRODUCTS = {}
 
 CURRENCY_SYMBOL = env("CURRENCY_SYMBOL", default="₹")
 

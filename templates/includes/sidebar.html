@@ -31,8 +31,13 @@
       {% else %}
         {% url 'records:list' m.resources.0 as murl %}
       {% endif %}
+      {% if m.key == "outreach" and nav_email_url %}
+      <a class="nav-link" href="{{ nav_email_url }}" target="_blank" rel="noopener" title="{{ m.label }}: opens the email dashboard{% if nav_current_product %} for {{ nav_current_product.name }}{% endif %} in a new tab">
+        <i class="bi {{ m.icon }}"></i><span class="label">{{ m.number }}. {{ m.short_label }} <i class="bi bi-box-arrow-up-right small opacity-75"></i></span></a>
+      {% else %}
       <a class="nav-link {% if resource and resource.module == m.key %}active{% endif %}" href="{{ murl }}" title="{{ m.label }}">
         <i class="bi {{ m.icon }}"></i><span class="label">{{ m.number }}. {{ m.short_label }}</span></a>
+      {% endif %}
     {% endfor %}
     <a class="nav-link {% if resource and resource.module == 'tasks' %}active{% endif %}" href="{% if nav_current_product %}{% url 'products:records' nav_current_product.slug 'tasks' %}{% else %}{% url 'records:list' 'tasks' %}{% endif %}">
       <i class="bi bi-check2-square"></i><span class="label">Tasks</span></a>

@@ -10,8 +10,10 @@
           <div class="card module-card" style="--brand: {{ product.brand_color }}">
             <div class="d-flex align-items-center gap-2">
               <div class="module-icon"><i class="bi {{ c.module.icon }}"></i></div>
-              <div class="min-w-0"><a class="row-title d-block text-truncate" href="{% url 'products:records' product.slug c.resource.key %}">{{ c.module.number }}. {{ c.module.label }}</a>
-                <small class="text-muted">{{ c.pct }}% complete</small></div>
+              <div class="min-w-0">{% if c.external_url %}<a class="row-title d-block text-truncate" href="{{ c.external_url }}" target="_blank" rel="noopener" title="Open the {{ product.name }} email dashboard in a new tab">{{ c.module.number }}. {{ c.module.label }} <i class="bi bi-box-arrow-up-right small"></i></a>
+                <small class="text-muted">{{ c.pct }}% complete · <a href="{% url 'products:records' product.slug c.resource.key %}">{{ c.resource.label_plural }} records</a></small>
+                {% else %}<a class="row-title d-block text-truncate" href="{% url 'products:records' product.slug c.resource.key %}">{{ c.module.number }}. {{ c.module.label }}</a>
+                <small class="text-muted">{{ c.pct }}% complete</small>{% endif %}</div>
               {% if c.can_write %}<div class="ms-auto d-flex gap-1">
                 <a class="btn btn-sm btn-light border" href="{% url 'products:record_import' product.slug c.resource.key %}" title="Import {{ c.resource.label_plural|lower }}" aria-label="Import {{ c.resource.label_plural|lower }}"><i class="bi bi-upload"></i></a>
                 <a class="btn btn-sm btn-light border" href="{% url 'products:record_create' product.slug c.resource.key %}" title="Add {{ c.resource.label|lower }}" aria-label="Add {{ c.resource.label|lower }}"><i class="bi bi-plus-lg"></i></a>

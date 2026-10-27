@@ -292,6 +292,23 @@ need API clients and server-side OAuth flows before they can sync:
 Each one requires real developer credentials, app review and approval by the provider. Until then, *Test
 connection* honestly reports that the client is not implemented.
 
+### Email marketing system (Outreach Console)
+
+`apps/email_marketing` links the separate email marketing app. Set `EMAIL_MARKETING_URL` and
+`EMAIL_MARKETING_SECRET` here and the same secret as `DASHBOARD_LINK_SECRET` there. Then:
+
+- **6. Cold Email** in the sidebar, the Cold Email card on a product dashboard and the Cold Email Outreach
+  page open that product's email dashboard in a new tab, already signed in, through a one-time link that
+  is valid for a minute (`/email-marketing/open/` → `/sso` there).
+- The main dashboard's **Email marketing** section shows live sent, open, click and reply figures per
+  product from `GET /api/dashboard/summary` there. It loads after the page, is cached for a minute, and
+  retries while a sleeping free-plan service wakes up. Turn it off in Admin panel → Dashboard layout.
+
+The email app has one shared administrator login and sends real email, so only organization administrators
+and users with write access to Cold Email for a product can open it; others keep the records list. Both
+apps sign tokens the same way (`apps/email_marketing/access.py`, `lib/dashboardLink.js` there). Products
+are matched by name; map any that differ in `EMAIL_MARKETING_PRODUCTS` in settings.
+
 ## 12. Project structure
 
 ```

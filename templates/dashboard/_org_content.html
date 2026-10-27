@@ -5,6 +5,14 @@
 {% for section in sections %}
   {% if section == "kpis" %}
     {% include "components/kpi_cards.html" with cards=kpi_cards %}
+  {% elif section == "email" and email_marketing_enabled %}
+    <div id="email-marketing-box" hx-get="{% url 'email_marketing:summary' %}" hx-trigger="load" hx-swap="innerHTML">
+      <div class="card mb-4">
+        <div class="card-header"><h3 class="card-title"><i class="bi bi-envelope-paper me-1"></i>Email marketing</h3>
+          <a class="btn btn-sm btn-primary" href="{% url 'email_marketing:open' %}" target="_blank" rel="noopener">Open email dashboard <i class="bi bi-box-arrow-up-right ms-1"></i></a></div>
+        <div class="p-3 small text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Loading live figures from the email system…</div>
+      </div>
+    </div>
   {% elif section == "charts" %}
     <div class="reveal row g-3 mb-4">
       {% for chart in charts %}

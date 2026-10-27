@@ -12,6 +12,8 @@ from apps.core.exporting import export_filename, export_tables, requested_format
 from apps.core.models import Target
 from apps.core.periods import PERIODS, resolve_period
 from apps.core.registry import registry
+from apps.email_marketing import access as email_marketing
+from apps.email_marketing.views import open_url as email_open_url
 
 
 @login_required
@@ -43,6 +45,8 @@ def product_dashboard(request, slug):
     module_cards = [c for c in data.module_cards() if levels.get(c["module"].key, "none") != "none"]
     for c in module_cards:
         c["can_write"] = levels.get(c["module"].key) in ("write", "manage")
+        if c["module"].key == email_marketing.MODULE and email_marketing.can_open(request.user, product):
+            c["external_url"] = email_open_url(product)
     ctx = {
         "product": product,
         "period": period,

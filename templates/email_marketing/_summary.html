@@ -1,0 +1,51 @@
+{% load ui %}
+{# Contents of #email-marketing-box (templates/dashboard/_org_content.html), loaded with htmx. #}
+<div class="card mb-4">
+  <div class="card-header">
+    <h3 class="card-title"><i class="bi bi-envelope-paper me-1"></i>Email marketing</h3>
+    <div class="d-flex align-items-center gap-2">
+      {% if not error %}<small class="text-muted d-none d-sm-inline">Live from the email system · all time</small>{% endif %}
+      <button class="btn btn-sm btn-light border" type="button" title="Refresh" aria-label="Refresh email marketing"
+              hx-get="{% url 'email_marketing:summary' %}" hx-target="#email-marketing-box"><i class="bi bi-arrow-clockwise"></i></button>
+      <a class="btn btn-sm btn-primary" href="{{ email_open_url }}" target="_blank" rel="noopener">
+        Open email dashboard <i class="bi bi-box-arrow-up-right ms-1"></i></a>
+    </div>
+  </div>
+  {% if error == "auth" %}
+    {% include "components/empty_state.html" with icon="bi-shield-exclamation" title="The email system refused the connection" message="EMAIL_MARKETING_SECRET here must equal DASHBOARD_LINK_SECRET in the email system." %}
+  {% elif error %}
+    <div hx-get="{% url 'email_marketing:summary' %}" hx-trigger="load delay:20s" hx-target="#email-marketing-box">
+      {% include "components/empty_state.html" with icon="bi-hourglass-split" title="Waiting for the email system" message="It may be waking up after being idle (about a minute on a free plan). Trying again automatically…" %}
+    </div>
+  {% else %}
+    <div class="row g-3 p-3 pb-0">
+      <div class="col-6 col-lg"><div class="kpi-label">Emails sent</div><div class="kpi-value">{{ totals.sent }}</div><div class="kpi-hint">{{ totals.sent_today }} today</div></div>
+      <div class="col-6 col-lg"><div class="kpi-label">Open rate</div><div class="kpi-value">{{ totals.open_rate }}%</div><div class="kpi-hint">{{ totals.opened }} opened</div></div>
+      <div class="col-6 col-lg"><div class="kpi-label">Click rate</div><div class="kpi-value">{{ totals.click_rate }}%</div><div class="kpi-hint">{{ totals.clicked }} clicked</div></div>
+      <div class="col-6 col-lg"><div class="kpi-label">Replies</div><div class="kpi-value">{{ totals.replied }}</div><div class="kpi-hint">{{ totals.reply_rate }}% of {{ totals.mailed }} mailed</div></div>
+      <div class="col-6 col-lg"><div class="kpi-label">Contacts</div><div class="kpi-value">{{ totals.contacts }}</div><div class="kpi-hint">across {{ rows|length }} product{{ rows|length|pluralize }}</div></div>
+    </div>
+    {% if rows %}
+    <div class="table-responsive mt-2">
+      <table class="table table-hover table-mobile-cards mb-0">
+        <thead><tr><th>Product</th><th>Sent</th><th>Today</th><th>Opened</th><th>Clicked</th><th>Replied</th><th></th></tr></thead>
+        <tbody>
+        {% for r in rows %}
+          <tr>
+            <td data-label="Product">{% if r.product %}<span class="product-dot" style="background:{{ r.product.brand_color }}"></span>{% endif %}<span class="fw-semibold">{{ r.name }}</span></td>
+            <td data-label="Sent">{{ r.sent }}</td>
+            <td data-label="Today">{{ r.sent_today }}</td>
+            <td data-label="Opened" style="min-width:120px"><div class="d-flex align-items-center gap-2"><div class="progress flex-grow-1"><div class="progress-bar" data-width="{{ r.open_rate }}%"{% if r.product %} style="background:{{ r.product.brand_color }}"{% endif %}></div></div><small>{{ r.open_rate }}%</small></div></td>
+            <td data-label="Clicked">{{ r.click_rate }}%</td>
+            <td data-label="Replied">{{ r.replied }}{% if r.mailed %} <small class="text-muted">({{ r.reply_rate }}%)</small>{% endif %}</td>
+            <td class="text-end">{% if r.url %}<a class="btn btn-sm btn-light border" href="{{ r.url }}" target="_blank" rel="noopener" title="Open {{ r.name }} in the email dashboard">Open <i class="bi bi-box-arrow-up-right ms-1"></i></a>{% endif %}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      {% include "components/empty_state.html" with icon="bi-envelope" title="No emails sent yet" message="Sends, opens and replies appear here as soon as the email system records them." %}
+    {% endif %}
+  {% endif %}
+</div>

@@ -25,6 +25,7 @@ urlpatterns = [
     path("investors/", include("apps.investors.urls")),
     path("seo/", include("apps.seo_optimization.urls")),
     path("tasks/", include("apps.tasks.urls")),
+    path("email-marketing/", include("apps.email_marketing.urls")),
     path("admin-panel/", include("apps.admin_panel.urls")),
     path("integrations/", include("apps.integrations.urls")),
     path("api/v1/", include("apps.api.urls")),

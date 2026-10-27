@@ -3,6 +3,7 @@ from apps.core.models import DashboardItem
 
 ORG_SECTIONS = [
     ("kpis", "KPI cards"),
+    ("email", "Email marketing (live from the email system)"),
     ("charts", "Charts"),
     ("comparison", "Product-wise comparison"),
     ("deadlines", "Upcoming deadlines"),
