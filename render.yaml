@@ -26,10 +26,10 @@ services:
       # Embedded replicas: reads are local instead of a round trip to Tokyo per query.
       - key: TURSO_REPLICA_DIR
         value: /tmp/turso-replica
-      # Email marketing system (Outreach Console): its https:// address, and a secret of 32+
-      # characters that must equal DASHBOARD_LINK_SECRET on that service.
+      # Email marketing system (Outreach Console), and a secret of 32+ characters that must
+      # equal DASHBOARD_LINK_SECRET on that service.
       - key: EMAIL_MARKETING_URL
-        sync: false
+        value: https://email-marketing-system-0vfa.onrender.com
       - key: EMAIL_MARKETING_SECRET
         sync: false
       - key: DJANGO_TIME_ZONE
