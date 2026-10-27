@@ -212,7 +212,7 @@ EMAIL_MARKETING_URL = env("EMAIL_MARKETING_URL", default="").rstrip("/")
 EMAIL_MARKETING_SECRET = env("EMAIL_MARKETING_SECRET", default="")
 EMAIL_MARKETING_TIMEOUT = env.int("EMAIL_MARKETING_TIMEOUT", default=12)
 # Dashboard product slug -> email system product name, only where the names differ.
-EMAIL_MARKETING_PRODUCTS = {}
+EMAIL_MARKETING_PRODUCTS = {"rcsl": "RCSL"}
 
 CURRENCY_SYMBOL = env("CURRENCY_SYMBOL", default="₹")
 
