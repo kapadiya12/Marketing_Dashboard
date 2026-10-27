@@ -509,3 +509,8 @@ tr[data-href] { cursor: pointer; }
 
 .tone-pink { background: #fce7f3; color: #be185d; }
 [data-bs-theme="dark"] .tone-pink { background: rgba(236, 72, 153, .15); color: #f9a8d4; }
+
+/* Email dashboard tab: the email marketing system inside the page */
+.email-frame-card { position: relative; overflow: hidden; }
+.email-frame { display: block; width: 100%; height: calc(100vh - 250px); min-height: 640px; border: 0; background: var(--surface, #fff); }
+.email-frame-loading { position: absolute; inset: 0 0 auto 0; padding: 1rem 1.25rem; color: var(--text-muted); font-size: .875rem; }

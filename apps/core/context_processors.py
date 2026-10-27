@@ -52,13 +52,13 @@ def navigation(request):
                             if current is not None else reverse("records:create", args=[key]),
                             "icon": "bi-plus-lg"})
     from apps.email_marketing import access as email_marketing
-    from apps.email_marketing.views import open_url as email_open_url
+    from apps.email_marketing.views import dashboard_url as email_dashboard_url
 
-    # Cold Email opens the email system (for the current product), signed in, when the user may use it.
-    email_url = email_open_url(current) if email_marketing.can_open(user, current) else None
+    # Cold Email opens the email system (for the current product) in its Email dashboard tab, when allowed.
+    email_url = email_dashboard_url(current) if email_marketing.can_open(user, current) else None
     if email_url:
         palette.append({"group": "Go to", "label": f"Email dashboard{f' · {current.name}' if current else ''}",
-                        "hint": "Opens the email system, signed in", "url": email_url, "icon": "bi-envelope-paper"})
+                        "hint": "The email system, signed in", "url": email_url, "icon": "bi-envelope-paper"})
     manages_panel = is_org_admin(user)
     if manages_panel:
         palette += [

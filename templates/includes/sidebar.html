@@ -32,7 +32,7 @@
         {% url 'records:list' m.resources.0 as murl %}
       {% endif %}
       {% if m.key == "outreach" and nav_email_url %}
-      <a class="nav-link" href="{{ nav_email_url }}" title="{{ m.label }}: opens the email dashboard{% if nav_current_product %} for {{ nav_current_product.name }}{% endif %}">
+      <a class="nav-link {% if email_dashboard_page or resource and resource.module == m.key %}active{% endif %}" href="{{ nav_email_url }}" title="{{ m.label }}: the email dashboard{% if nav_current_product %} for {{ nav_current_product.name }}{% endif %}">
         <i class="bi {{ m.icon }}"></i><span class="label">{{ m.number }}. {{ m.short_label }}</span></a>
       {% else %}
       <a class="nav-link {% if resource and resource.module == m.key %}active{% endif %}" href="{{ murl }}" title="{{ m.label }}">

@@ -60,27 +60,41 @@ def test_only_cold_email_writers_may_open(linked, users, products, login, client
     assert _sso_payload(login(users["member_a"]).get(reverse("email_marketing:open") + "?view=Horticulture"))["v"] == ""
 
 
-def test_link_is_off_until_configured(admin_user, users, products, login):
+def test_link_is_off_until_configured(settings, admin_user, users, products, login):
+    settings.EMAIL_MARKETING_URL = settings.EMAIL_MARKETING_SECRET = ""
     client = login(admin_user)
     assert client.get(reverse("email_marketing:open")).status_code == 404
+    assert client.get(reverse("email_marketing:dashboard")).status_code == 404
     dash = client.get(reverse("analytics:dashboard")).content.decode()
     assert "Not connected yet" in dash and reverse("email_marketing:summary") not in dash  # setup card for admins
     page = client.get(reverse("products:dashboard", args=["proceaze"])).content.decode()
-    assert reverse("email_marketing:open") not in page
+    assert reverse("email_marketing:open") not in page and reverse("email_marketing:dashboard") not in page
     assert 'id="email-marketing-box"' not in login(users["member_a"]).get(reverse("analytics:dashboard")).content.decode()
 
 
 def test_cold_email_links_open_the_email_dashboard(linked, admin_user, products, login):
     client = login(admin_user)
-    open_url = reverse("email_marketing:open") + "?product=proceaze"
+    tab_url = reverse("email_marketing:dashboard") + "?product=proceaze"
     page = client.get(reverse("products:dashboard", args=["proceaze"])).content.decode()
-    assert page.count(f'href="{open_url}"') >= 2  # module card + sidebar, in the same tab
+    assert page.count(f'href="{tab_url}"') >= 2  # module card + sidebar, inside this dashboard
     assert 'target="_blank"' not in page
     records = client.get(reverse("products:records", args=["proceaze", "outreach"])).content.decode()
-    assert "Open ProcEaze email dashboard" in records
+    assert f'href="{tab_url}"' in records and "Email dashboard" in records
     dash = client.get(reverse("analytics:dashboard")).content.decode()
     assert 'id="email-marketing-box"' in dash and reverse("email_marketing:summary") in dash
     assert "Not connected yet" not in dash
+
+
+def test_email_dashboard_tab_shows_the_email_system_inside(linked, admin_user, users, products, login):
+    page = login(admin_user).get(reverse("email_marketing:dashboard") + "?product=proceaze").content.decode()
+    open_url = reverse("email_marketing:open") + "?product=proceaze"
+    assert f'<iframe class="email-frame" name="email-dashboard-frame" src="{open_url}&amp;embed=1"' in page
+    assert f'href="{open_url}"' in page  # full screen
+    assert reverse("products:records", args=["proceaze", "outreach"]) in page  # the records tabs
+    resp = login(admin_user).get(open_url + "&embed=1")
+    assert resp["Location"].endswith("&embed=1") and _sso_payload(resp)["v"] == "ProcEaze"
+    assert login(users["viewer_a"]).get(reverse("email_marketing:dashboard") + "?product=proceaze").status_code == 403
+    assert login(users["member_b"]).get(reverse("email_marketing:dashboard") + "?product=proceaze").status_code == 404
 
 
 SUMMARY = {"generatedAt": "2026-10-27T10:00:00Z", "products": [
