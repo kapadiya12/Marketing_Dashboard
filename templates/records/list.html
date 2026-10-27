@@ -27,7 +27,7 @@
 
 {% if module_resources|length > 1 or module.key == "outreach" and nav_email_url %}
 <ul class="nav module-tabs">
-  {% if module.key == "outreach" and nav_email_url %}<li class="nav-item"><a class="nav-link" href="{{ nav_email_url }}"><i class="bi bi-envelope-paper me-1"></i>Email dashboard</a></li>{% endif %}
+  {% if module.key == "outreach" and nav_email_url %}<li class="nav-item"><a class="nav-link" href="{{ nav_email_url }}"><i class="bi bi-envelope-paper me-1"></i>Email dashboard <i class="bi bi-box-arrow-up-right small"></i></a></li>{% endif %}
   {% for r in module_resources %}
     <li class="nav-item"><a class="nav-link {% if r.key == resource.key %}active{% endif %}" href="{% if scope_product %}{% url 'products:records' scope_product.slug r.key %}{% else %}{% url 'records:list' r.key %}{% endif %}"><i class="bi {{ r.icon }} me-1"></i>{{ r.label_plural }}</a></li>
   {% endfor %}

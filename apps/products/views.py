@@ -13,7 +13,7 @@ from apps.core.models import Target
 from apps.core.periods import PERIODS, resolve_period
 from apps.core.registry import registry
 from apps.email_marketing import access as email_marketing
-from apps.email_marketing.views import dashboard_url as email_dashboard_url
+from apps.email_marketing.views import open_url as email_open_url
 
 
 @login_required
@@ -46,7 +46,7 @@ def product_dashboard(request, slug):
     for c in module_cards:
         c["can_write"] = levels.get(c["module"].key) in ("write", "manage")
         if c["module"].key == email_marketing.MODULE and email_marketing.can_open(request.user, product):
-            c["external_url"] = email_dashboard_url(product)
+            c["external_url"] = email_open_url(product)
     ctx = {
         "product": product,
         "period": period,
