@@ -270,6 +270,7 @@ a.stat-link:hover strong { color: var(--accent-ink) !important; }
 .table > thead th a { color: var(--text-muted); }
 .table > thead th a:hover { color: var(--accent); }
 .table > tbody td { padding: .7rem .8rem; vertical-align: middle; border-color: var(--border); }
+.table > tbody tr.row-pending { opacity: .35; pointer-events: none; transition: opacity .2s; }
 .table-hover > tbody > tr { transition: background .12s ease; }
 .table-hover > tbody > tr:hover > * { --bs-table-bg-state: color-mix(in srgb, var(--accent) 5%, transparent); }
 tr[data-href] { cursor: pointer; }

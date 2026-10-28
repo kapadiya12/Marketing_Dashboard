@@ -220,18 +220,24 @@ def test_listing_platform_typed_as_text(admin_user, products, platform, login):
     assert 'value="My New Directory"' in page
 
 
-def test_bulk_delete_on_turso_commits_record_by_record(admin_user, products, login, monkeypatch):
-    """Turso closes long write transactions, so a bulk action there runs without one around the selection."""
-    from types import SimpleNamespace
+def test_bulk_archive_and_delete_cost_the_same_for_any_selection(admin_user, products, login):
+    """Each statement is a round trip to Turso: bulk actions must not run statements per selected record."""
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
 
-    from apps.core import views
-    from apps.tasks.models import Task
+    from apps.cold_calls.models import ColdCall
 
-    monkeypatch.setattr(views, "connection", SimpleNamespace(is_remote=True))
-    monkeypatch.setattr(views, "transaction", SimpleNamespace(
-        atomic=lambda *a, **k: pytest.fail("bulk action opened a transaction")))
-    t1 = create_record("tasks", products[0], suffix="a")
-    t2 = create_record("tasks", products[0], suffix="b")
-    resp = login(admin_user).post(reverse("records:bulk", args=["tasks"]), {"ids": [t1.pk, t2.pk], "action": "delete"})
-    assert resp.status_code == 302
-    assert not Task.objects.filter(pk__in=[t1.pk, t2.pk]).exists()
+    client = login(admin_user)
+    url = reverse("records:bulk", args=["calls"])
+    counts = {}
+    for n in (2, 12):
+        ids = [create_record("calls", products[0], suffix=f"{n}-{i}").pk for i in range(n)]
+        with CaptureQueriesContext(connection) as archive:
+            client.post(url, {"ids": ids, "action": "archive"})
+        assert ColdCall.objects.filter(pk__in=ids, is_archived=True).count() == n
+        with CaptureQueriesContext(connection) as delete:
+            client.post(url, {"ids": ids, "action": "delete"})
+        assert not ColdCall.objects.filter(pk__in=ids).exists()
+        counts[n] = (len(archive), len(delete))
+    assert counts[2] == counts[12]
+    assert AuditLog.objects.filter(action="delete", message="Bulk delete").count() == 14

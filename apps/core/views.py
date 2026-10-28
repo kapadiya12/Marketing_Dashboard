@@ -30,7 +30,7 @@ from apps.accounts.permissions import (
     scoped_queryset,
 )
 from apps.audit.models import AuditLog
-from apps.audit.services import diff_instances, log_action, snapshot
+from apps.audit.services import build_log, diff_instances, log_action, log_actions, snapshot
 
 from . import csvio
 from .filtering import apply_filters, apply_sort, filter_field_choices
@@ -86,6 +86,15 @@ def purge_record(obj):
         att.delete()
     obj.custom_values.all().delete()
     obj.delete()
+
+
+def purge_records(model, pks):
+    """``purge_record`` for many records in a few statements: attachment files, then the rows (the
+    generic relations take their attachments and custom field values with them)."""
+    ct = ContentType.objects.get_for_model(model)
+    for att in Attachment.objects.filter(content_type=ct, object_id__in=pks):
+        att.file.delete(save=False)
+    model.objects.filter(pk__in=pks).delete()
 
 
 def list_columns(resource):
@@ -571,48 +580,61 @@ def bulk_action(request, resource):
         return csvio.csv_response(resource, qs, f"{name}.csv")
     level = "manage" if action == "delete" else "write"
     qs = scoped_queryset(request.user, resource, level).filter(pk__in=ids)
-    count = qs.count()
+    objs = list(qs)
+    count = len(objs)
     if count != len(set(ids)):
         messages.warning(request, f"{len(set(ids)) - count} selected record(s) skipped: insufficient permission.")
-    # Turso closes a write transaction after a few seconds and every statement in it is a network round trip,
-    # so there each record commits on its own instead of the whole selection in one transaction.
+    pks = [obj.pk for obj in objs]
+    # Archive, restore and delete are a few set-based statements for the whole selection (each statement is a
+    # network round trip on Turso). Status and assignment save record by record (model save() logic); Turso
+    # closes a write transaction after a few seconds, so there each of those commits on its own.
+    if action in ("archive", "restore"):
+        archived = action == "archive"
+        now = timezone.now()
+        with transaction.atomic():
+            resource.model.objects.filter(pk__in=pks).update(
+                is_archived=archived, archived_at=now if archived else None, updated_by=request.user, updated_at=now)
+            log_actions([build_log(AuditLog.Action.ARCHIVE if archived else AuditLog.Action.RESTORE, obj,
+                                   request.user, message=f"Bulk {action}") for obj in objs])
+        messages.success(request, f"{count} record(s) {'archived' if archived else 'restored'}.")
+        return redirect(next_url)
+    if action == "delete":
+        entries = [build_log(AuditLog.Action.DELETE, obj, request.user, message="Bulk delete") for obj in objs]
+        with transaction.atomic():
+            purge_records(resource.model, pks)
+            log_actions(entries)
+        messages.success(request, f"{count} record(s) deleted.")
+        return redirect(next_url)
     with nullcontext() if getattr(connection, "is_remote", False) else transaction.atomic():
-        if action == "archive":
-            for obj in qs:
-                obj.archive(request.user)
-                log_action(AuditLog.Action.ARCHIVE, obj, request.user, message="Bulk archive")
-        elif action == "restore":
-            for obj in qs:
-                obj.restore(request.user)
-                log_action(AuditLog.Action.RESTORE, obj, request.user, message="Bulk restore")
-        elif action == "delete":
-            for obj in qs:
-                log_action(AuditLog.Action.DELETE, obj, request.user, message="Bulk delete")
-                purge_record(obj)
-        elif action == "status":
+        if action == "status":
             new_status = request.POST.get("status")
             if new_status not in {s.key for s in get_statuses(resource.key)}:
                 messages.error(request, "Choose a valid status.")
                 return redirect(next_url)
-            for obj in qs:
+            entries = []
+            for obj in objs:
                 old = obj.status
                 obj.status = new_status
                 obj.updated_by = request.user
                 obj.save()
-                log_action(AuditLog.Action.STATUS, obj, request.user, changes={"status": {"from": old, "to": new_status}})
+                entries.append(build_log(AuditLog.Action.STATUS, obj, request.user,
+                                         changes={"status": {"from": old, "to": new_status}}))
+            log_actions(entries)
         elif action == "assign":
             uid = request.POST.get("assigned_to")
             assignee = assignable_users(request.user).filter(pk=uid).first() if uid else None
             if uid and assignee is None:
                 messages.error(request, "Choose a valid team member.")
                 return redirect(next_url)
-            for obj in qs:
+            entries = []
+            for obj in objs:
                 obj.assigned_to = assignee
                 obj.updated_by = request.user
                 obj.save()
-                log_action(AuditLog.Action.UPDATE, obj, request.user,
-                           changes={"assigned_to": {"to": str(assignee) if assignee else None}})
+                entries.append(build_log(AuditLog.Action.UPDATE, obj, request.user,
+                                         changes={"assigned_to": {"to": str(assignee) if assignee else None}}))
                 notify_assignment(obj, assignee, request.user)
+            log_actions(entries)
         else:
             messages.error(request, "Unknown bulk action.")
             return redirect(next_url)

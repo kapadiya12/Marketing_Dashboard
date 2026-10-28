@@ -287,6 +287,28 @@
     bar.style.width = "25%";
     barTimer = setTimeout(() => { bar.style.width = "70%"; }, 250);
   }
+  // A clicked submit button spins and is disabled until the next page arrives (or after 30 s, e.g. a download).
+  function busy(btn, label) {
+    if (!btn || btn.tagName !== "BUTTON") return;
+    const form = btn.form;
+    btn.dataset.idleHtml = btn.innerHTML;
+    setTimeout(() => {  // after the browser has read the button's name/value into the submission
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>' + label;
+    }, 0);
+    setTimeout(() => idle(btn, form), 30000);
+  }
+  function idle(btn, form) {
+    if (btn && btn.dataset.idleHtml !== undefined) { btn.disabled = false; btn.innerHTML = btn.dataset.idleHtml; delete btn.dataset.idleHtml; }
+    if (form) delete form.dataset.submitting;
+  }
+  // Back/forward restores a page from cache with its buttons still spinning.
+  window.addEventListener("pageshow", function (e) {
+    if (!e.persisted) return;
+    document.querySelectorAll("button[data-idle-html]").forEach(b => idle(b, b.form));
+    document.querySelectorAll("form[data-submitting]").forEach(f => delete f.dataset.submitting);
+    document.querySelectorAll(".row-pending").forEach(r => r.classList.remove("row-pending"));
+  });
   function endBar() {
     if (!bar) return;
     clearTimeout(barTimer);
@@ -360,12 +382,25 @@
     if (form.id === "bulk-form" && e.submitter && e.submitter.value === "apply") {
       const action = form.querySelector("[data-bulk-action]").value;
       if (action === "delete" && !window.confirm("Permanently delete the selected records? This cannot be undone.")) { e.preventDefault(); return; }
-      if (action.startsWith("export")) toast("Preparing your download…", "info");
+      if (action.startsWith("export")) { toast("Preparing your download…", "info"); return; }
+      if (form.dataset.submitting) { e.preventDefault(); return; }
+      form.dataset.submitting = "1";
+      // Show the change at once: selected rows fade, the button spins until the page comes back.
+      const labels = { delete: "Deleting…", archive: "Archiving…", restore: "Restoring…", status: "Updating…", assign: "Assigning…" };
+      document.querySelectorAll("input[name=ids]:checked").forEach(cb => { const tr = cb.closest("tr"); if (tr) tr.classList.add("row-pending"); });
+      busy(e.submitter, labels[action] || "Working…");
+      startBar();
       return;
     }
     const msg = form.dataset.confirm || (e.submitter && e.submitter.dataset.confirm);
     if (msg && !window.confirm(msg)) { e.preventDefault(); return; }
-    if (!form.hasAttribute("hx-get") && !form.hasAttribute("hx-post") && form.method.toLowerCase() === "post" && !form.querySelector("input[type=file]")) startBar();
+    if (!form.hasAttribute("hx-get") && !form.hasAttribute("hx-post") && form.method.toLowerCase() === "post") {
+      // A second click while the first is still saving would send everything twice.
+      if (form.dataset.submitting) { e.preventDefault(); return; }
+      form.dataset.submitting = "1";
+      busy(e.submitter || form.querySelector("button[type=submit], button:not([type])"), "Saving…");
+      if (!form.querySelector("input[type=file]")) startBar();
+    }
   });
 
   // Palette keyboard + typing
