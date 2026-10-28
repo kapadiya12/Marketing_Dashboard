@@ -6,6 +6,7 @@ local ``.env`` file). The database is Turso when ``TURSO_DATABASE_URL`` is set,
 otherwise PostgreSQL via ``DATABASE_URL``; when neither is set, a local SQLite
 file is used for development only.
 """
+import tempfile
 from pathlib import Path
 
 import environ
@@ -214,6 +215,11 @@ EMAIL_MARKETING_SECRET = env("EMAIL_MARKETING_SECRET", default="")
 EMAIL_MARKETING_TIMEOUT = env.int("EMAIL_MARKETING_TIMEOUT", default=12)
 # Dashboard product slug -> email system product name, only where the names differ.
 EMAIL_MARKETING_PRODUCTS = {"rcsl": "RCSL"}
+
+# Imports run in a separate process (apps/core/import_jobs.py): on by default with Turso, where a long
+# import inside a web request freezes that web worker. Jobs (upload + status) are kept in IMPORT_JOB_DIR.
+IMPORT_IN_BACKGROUND = env.bool("IMPORT_IN_BACKGROUND", default=bool(env("TURSO_DATABASE_URL", default="")))
+IMPORT_JOB_DIR = env("IMPORT_JOB_DIR", default=str(Path(tempfile.gettempdir()) / "bizdev-import-jobs"))
 
 CURRENCY_SYMBOL = env("CURRENCY_SYMBOL", default="₹")
 

@@ -374,7 +374,10 @@ class _Rollback(Exception):
     pass
 
 
-def run_import(spec, headers, rows, include_samples=False):
+def run_import(spec, headers, rows, include_samples=False, progress=None):
+    """``progress(stage, done, total)`` is told how far it got (background imports show it)."""
+    progress = progress or (lambda stage, done, total: None)
+    rows = list(rows)
     known = set(spec.columns) | set(spec.ignored_columns)
     unknown = [h for h in headers if h not in known]
     if unknown:
@@ -385,7 +388,8 @@ def run_import(spec, headers, rows, include_samples=False):
         if h in spec.ignored_columns and h not in ("id", "created_at", "updated_at"):
             adjustments.append((1, f"column “{h}” is no longer used and was skipped"))
     mapper = RowMapper(spec)
-    for row_no, row in rows:
+    for checked, (row_no, row) in enumerate(rows, 1):
+        progress("Checking rows", checked, len(rows))
         if not any(row.values()):
             continue
         if is_sample_row(row):
@@ -428,11 +432,12 @@ def run_import(spec, headers, rows, include_samples=False):
             log.warning("Import %s row %s: %s", spec.title, row_no, msg)
         return {"created": 0, "errors": errors, "total": len(valid) + len(errors), **base}
     if getattr(connection, "is_remote", False):
-        return _save_rows_separately(spec, valid, base)
+        return _save_rows_separately(spec, valid, base, progress)
     created = 0
     try:
         with transaction.atomic():
             for row_no, form in valid:
+                progress("Saving rows", created + 1, len(valid))
                 try:
                     with transaction.atomic():
                         spec.save(form)
@@ -447,12 +452,13 @@ def run_import(spec, headers, rows, include_samples=False):
     return {"created": created, "errors": [], "total": created, **base}
 
 
-def _save_rows_separately(spec, valid, base):
+def _save_rows_separately(spec, valid, base, progress=lambda stage, done, total: None):
     """Turso closes a write transaction after a few seconds, and each statement in one is a network round trip,
     so one transaction around a whole file fails part-way. Save each row in its own transaction instead and,
     if a row fails, delete the rows this import added so that still nothing is saved."""
     added, errors = [], []
-    for row_no, form in valid:
+    for saved, (row_no, form) in enumerate(valid, 1):
+        progress("Saving rows", saved, len(valid))
         instance = getattr(form, "instance", None)
         is_new = instance is not None and instance.pk is None
         try:
@@ -754,9 +760,31 @@ def import_page(request, spec, audit=None, extra_context=None):
     kind = request.GET.get("template")
     if kind in ("csv", "csv_sample", "xlsx"):
         return template_response(spec, kind)
-    result = None
+    from . import import_jobs
+
+    result, job = None, None
+    in_job = getattr(request, "_import_job", None) is not None
+    if request.method == "GET" and request.GET.get("job"):
+        job = import_jobs.load(request.GET["job"], request.user)
+        if job["status"] == "done":
+            if request.headers.get("HX-Request"):  # finished while the page was polling: reload it
+                response = HttpResponse(status=204)
+                response["HX-Redirect"] = request.get_full_path()
+                return response
+            if not job.get("delivered"):
+                for level, text, tags in job.get("messages", []):
+                    messages.add_message(request, level, text, extra_tags=tags)
+                job["delivered"] = True
+                import_jobs.save(job)
+                if job.get("location"):
+                    return redirect(job["location"])
+            result, job = job.get("result"), None
+        elif request.headers.get("HX-Request"):
+            return render(request, "imports/_job_progress.html", {"job": job})
     if request.method == "POST":
         upload = UploadForm(request.POST, request.FILES)
+        if upload.is_valid() and import_jobs.enabled() and not in_job:
+            return redirect(f"{request.path}?job={import_jobs.start(request, upload.cleaned_data['file'])}")
         if upload.is_valid():
             try:
                 headers, rows = read_table(upload.cleaned_data["file"])
@@ -764,7 +792,9 @@ def import_page(request, spec, audit=None, extra_context=None):
                 upload.add_error("file", str(exc))
             else:
                 result = run_import(spec, headers, rows,
-                                    include_samples=upload.cleaned_data.get("include_samples", False))
+                                    include_samples=upload.cleaned_data.get("include_samples", False),
+                                    progress=getattr(request, "_import_progress", None))
+                request._import_result = result
                 if result["created"]:
                     if audit:
                         audit(result["created"])
@@ -788,7 +818,7 @@ def import_page(request, spec, audit=None, extra_context=None):
                     messages.warning(request, "The file contained no data rows.")
     else:
         upload = UploadForm()
-    ctx = {"spec": spec, "form": upload, "result": result, "guide": column_guide(spec),
+    ctx = {"spec": spec, "form": upload, "result": result, "job": job, "guide": column_guide(spec),
            "samples": build_samples(spec)}
     ctx.update(extra_context or {})
     template = "imports/import_admin.html" if ctx.get("base_template") == "admin_panel/_base.html" \

@@ -1,0 +1,19 @@
+{# Progress of a background import (apps/core/import_jobs.py); polls itself until the job is finished. #}
+<div id="import-job" class="card mb-3 {% if job.status == 'failed' %}border-danger{% else %}border-primary{% endif %}"
+     {% if job.status == "queued" or job.status == "running" %}hx-get="?job={{ job.id }}" hx-trigger="load delay:2s" hx-swap="outerHTML"{% endif %}>
+  <div class="card-body">
+    {% if job.status == "failed" %}
+      <div class="text-danger fw-semibold"><i class="bi bi-exclamation-octagon me-1"></i>{{ job.error }}</div>
+      <small class="text-muted">File: {{ job.filename }}</small>
+    {% else %}
+      <div class="d-flex align-items-center gap-2 fw-semibold">
+        <span class="spinner-border spinner-border-sm text-primary" role="status"></span>
+        Importing {{ job.filename }}…
+        <small class="text-muted fw-normal ms-auto">{% if job.total %}{{ job.stage }} {{ job.done }} of {{ job.total }}{% else %}Starting…{% endif %}</small>
+      </div>
+      <div class="progress my-2" style="height:.5rem"><div class="progress-bar progress-bar-striped progress-bar-animated"
+        style="width:{% if job.total %}{% widthratio job.done job.total 100 %}{% else %}5{% endif %}%"></div></div>
+      <small class="text-muted">The import runs in the background: this page updates by itself, and you can keep using the dashboard in another tab.</small>
+    {% endif %}
+  </div>
+</div>

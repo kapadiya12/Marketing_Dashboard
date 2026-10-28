@@ -300,3 +300,60 @@ def test_minimal_column_files_import(key, admin_user, products, catalog, login):
         w.writerow(r)
     resp = client.post(url, {"file": _csv(out.getvalue())})
     assert resp.status_code == 302, (keep, resp.context["result"]["errors"] if resp.context else resp)
+
+
+@pytest.fixture
+def background_imports(settings, tmp_path, monkeypatch):
+    """Background imports, with the import process run inline (in the test database)."""
+    from apps.core import import_jobs
+
+    settings.IMPORT_IN_BACKGROUND = True
+    settings.IMPORT_JOB_DIR = str(tmp_path)
+    monkeypatch.setattr(import_jobs, "_spawn", import_jobs.run)
+    return import_jobs
+
+
+def _upload(text):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    return SimpleUploadedFile("calls.csv", text.encode("utf-8"), content_type="text/csv")
+
+
+def test_background_import_saves_and_reports(background_imports, admin_user, products, login):
+    from apps.cold_calls.models import ColdCall
+
+    client = login(admin_user)
+    url = reverse("products:record_import", args=["proceaze", "calls"])
+    resp = client.post(url, {"file": _upload("contact_name,company\nAsha,Example Co\nRavi,\n")})
+    assert resp.status_code == 302 and "?job=" in resp["Location"]
+    job_id = resp["Location"].split("?job=")[1]
+    assert background_imports.read(job_id)["status"] == "done"
+    polled = client.get(resp["Location"], HTTP_HX_REQUEST="true")
+    assert polled["HX-Redirect"] == resp["Location"]  # finished: the polling page reloads
+    done = client.get(resp["Location"], follow=True)
+    assert done.redirect_chain[0][0] == reverse("products:records", args=["proceaze", "calls"])
+    assert "Imported 2 record(s)" in done.content.decode()
+    assert sorted(ColdCall.objects.values_list("contact_name", flat=True)) == ["Asha", "Ravi"]
+
+
+def test_background_import_shows_row_problems(background_imports, admin_user, users, products, login):
+    from apps.cold_calls.models import ColdCall
+
+    client = login(admin_user)
+    url = reverse("products:record_import", args=["proceaze", "calls"])
+    resp = client.post(url, {"file": _upload("contact_name,contact_date\nAsha,2026-10-01\n,2026-10-02\n")})
+    page = client.get(resp["Location"]).content.decode()
+    assert "need attention" in page and "Problems found" in page
+    assert ColdCall.objects.count() == 0
+    assert login(users["member_a"]).get(resp["Location"]).status_code == 404  # someone else's job
+
+
+def test_background_import_progress_while_running(background_imports, admin_user, products, login, monkeypatch):
+    monkeypatch.setattr(background_imports, "_spawn", lambda job_id: None)  # process not started yet
+    client = login(admin_user)
+    url = reverse("products:record_import", args=["proceaze", "calls"])
+    resp = client.post(url, {"file": _upload("contact_name\nAsha\n")})
+    page = client.get(resp["Location"]).content.decode()
+    assert "Importing calls.csv" in page and 'hx-trigger="load delay:2s"' in page
+    partial = client.get(resp["Location"], HTTP_HX_REQUEST="true").content.decode()
+    assert partial.strip().startswith("{#") or 'id="import-job"' in partial
