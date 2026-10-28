@@ -1,0 +1,23 @@
+{# Live part of a product's Cold Email card (templates/products/_dashboard_content.html), loaded with htmx. #}
+<div class="email-live">
+  {% if row %}
+    <div class="progress" title="Open rate {{ row.open_rate }}%"><div class="progress-bar" style="width:{% if row.open_rate > 100 %}100{% else %}{{ row.open_rate|stringformat:'s' }}{% endif %}%;background:{{ product.brand_color }}"></div></div>
+    <div class="stats">
+      <a class="stat-link" href="{{ email_open_url }}" title="{{ row.sent_today }} sent today"><strong>{{ row.sent }}</strong>sent</a>
+      <a class="stat-link" href="{{ email_open_url }}" title="{{ row.opened }} opened"><strong class="text-success">{{ row.open_rate }}%</strong>opened</a>
+      <a class="stat-link" href="{{ email_open_url }}" title="{{ row.reply_rate }}% of {{ row.mailed }} mailed"><strong class="text-warning">{{ row.replied }}</strong>replies</a>
+      <a class="stat-link" href="{{ email_open_url }}"><strong>{{ row.contacts }}</strong>contacts</a>
+    </div>
+  {% elif error == "auth" %}
+    <div class="progress"></div>
+    <p class="small text-muted mb-0 mt-2"><i class="bi bi-shield-exclamation me-1"></i>The email system refused the connection (check the shared secret).</p>
+  {% elif error %}
+    <div hx-get="{% url 'email_marketing:product_stats' %}?product={{ product.slug }}" hx-trigger="load delay:20s" hx-target="closest .email-live" hx-swap="outerHTML">
+      <div class="progress"></div>
+      <p class="small text-muted mb-0 mt-2"><span class="spinner-border spinner-border-sm me-1"></span>Waiting for the email system to wake up…</p>
+    </div>
+  {% else %}
+    <div class="progress"></div>
+    <p class="small text-muted mb-0 mt-2">No emails sent for {{ product.name }} yet · <a href="{{ email_open_url }}">open the email dashboard</a></p>
+  {% endif %}
+</div>

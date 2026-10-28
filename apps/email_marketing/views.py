@@ -119,3 +119,19 @@ def summary(request):
                       reply_rate=_pct(totals["replied"], totals["mailed"]))
         ctx.update(rows=rows, totals=totals, generated_at=data.get("generatedAt"))
     return render(request, "email_marketing/_summary.html", ctx)
+
+
+@login_required
+def product_stats(request):
+    """Live figures for one product's Cold Email card on its dashboard (loaded with htmx after the page)."""
+    product, _ = _target(request)
+    ctx = {"product": product, "email_open_url": open_url(product), "error": None, "row": None}
+    try:
+        data = _fetch_summary(request.user)
+    except urllib.error.HTTPError as exc:
+        ctx["error"] = "auth" if exc.code in (401, 403) else "unavailable"
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError):
+        ctx["error"] = "unavailable"
+    else:
+        ctx["row"] = next((r for r in _summary_rows(request.user, data) if r["product"] == product), None)
+    return render(request, "email_marketing/_product_stats.html", ctx)

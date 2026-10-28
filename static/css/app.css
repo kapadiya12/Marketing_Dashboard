@@ -510,3 +510,6 @@ tr[data-href] { cursor: pointer; }
 .tone-pink { background: #fce7f3; color: #be185d; }
 [data-bs-theme="dark"] .tone-pink { background: rgba(236, 72, 153, .15); color: #f9a8d4; }
 
+
+/* "Live" marker on cards fed by the email marketing system */
+.live-dot { display: inline-block; width: .45rem; height: .45rem; border-radius: 50%; background: #16a34a; margin-right: .3rem; vertical-align: middle; box-shadow: 0 0 0 2px rgba(22, 163, 74, .2); }

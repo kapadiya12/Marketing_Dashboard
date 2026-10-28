@@ -131,3 +131,21 @@ def test_summary_explains_failures(linked, admin_user, products, login):
 
 def test_summary_requires_access(linked, users, products, login):
     assert login(users["viewer_a"]).get(reverse("email_marketing:summary")).status_code == 403
+
+
+def test_product_card_shows_live_email_figures(linked, admin_user, users, products, login):
+    page = login(admin_user).get(reverse("products:dashboard", args=["proceaze"])).content.decode()
+    stats_url = reverse("email_marketing:product_stats") + "?product=proceaze"
+    assert f'hx-get="{stats_url}"' in page and "Live from the email system" in page
+    with mock.patch("urllib.request.urlopen", return_value=_respond(SUMMARY)):
+        card = login(admin_user).get(stats_url).content.decode()
+    assert "<strong>200</strong>sent" in card and "25.0%" in card and "<strong>120</strong>contacts" in card
+    assert f'href="{reverse("email_marketing:open")}?product=proceaze"' in card
+    assert login(users["viewer_a"]).get(stats_url).status_code == 403
+
+
+def test_product_card_waits_for_a_sleeping_email_system(linked, admin_user, products, login):
+    url = reverse("email_marketing:product_stats") + "?product=proceaze"
+    with mock.patch("urllib.request.urlopen", side_effect=urllib.error.URLError("timed out")):
+        card = login(admin_user).get(url).content.decode()
+    assert "Waiting for the email system" in card and 'hx-trigger="load delay:20s"' in card
