@@ -183,3 +183,51 @@ def test_security_headers_and_csrf(client, users):
     assert resp["X-Frame-Options"] == "DENY"
 
 
+
+
+TURSO_LISTINGS_CSV = """product,platform,status,listing_url,submission_date,assigned_to,notes
+proceaze,Indie Hackers,Not Started,https://www.indiehackers.com/products/new,,,"Maker account; tagline, logo."
+proceaze,App Advisor,Not Started,https://appadvisor.in/submit-product,,,Review within 2 working days.
+proceaze,Launchbase,Not Started,https://www.launchbase.in/,,,India-focused launch community.
+"""
+
+
+def test_import_on_turso_saves_row_by_row(admin_user, products, login, monkeypatch):
+    """Turso closes long write transactions: each row is saved in its own (the live 502 on uploads)."""
+    from types import SimpleNamespace
+
+    from apps.core import importing
+    from apps.listings.models import ListingRecord
+
+    monkeypatch.setattr(importing, "connection", SimpleNamespace(is_remote=True))
+    url = reverse("products:record_import", args=["proceaze", "listings"])
+    resp = login(admin_user).post(url, {"file": _csv(TURSO_LISTINGS_CSV)})
+    assert resp.status_code == 302
+    assert sorted(ListingRecord.objects.values_list("platform__name", flat=True)) == ["App Advisor", "Indie Hackers", "Launchbase"]
+
+
+def test_import_on_turso_undoes_added_rows_when_one_fails(admin_user, products, monkeypatch):
+    from types import SimpleNamespace
+
+    from django.db import IntegrityError
+
+    from django.forms import modelform_factory
+
+    from apps.core import importing
+
+    monkeypatch.setattr(importing, "connection", SimpleNamespace(is_remote=True))
+    forms_ = []
+    for title in ("First", "Second"):
+        form = modelform_factory(Task, fields=["product", "title"])(data={"product": products[0].pk, "title": title})
+        assert form.is_valid(), form.errors
+        forms_.append((len(forms_) + 2, form))
+
+    def save(form):
+        if form.cleaned_data["title"] == "Second":
+            raise IntegrityError("duplicate")
+        form.save()
+
+    spec = SimpleNamespace(save=save)
+    result = importing._save_rows_separately(spec, forms_, {"skipped": 0, "adjustments": []})
+    assert result["created"] == 0 and result["errors"][0][0] == 3
+    assert Task.objects.count() == 0

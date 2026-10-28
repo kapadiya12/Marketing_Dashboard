@@ -23,7 +23,7 @@ from typing import Callable, Optional
 from django import forms
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, connection, transaction
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -427,6 +427,8 @@ def run_import(spec, headers, rows, include_samples=False):
         for row_no, msg in errors[:50]:
             log.warning("Import %s row %s: %s", spec.title, row_no, msg)
         return {"created": 0, "errors": errors, "total": len(valid) + len(errors), **base}
+    if getattr(connection, "is_remote", False):
+        return _save_rows_separately(spec, valid, base)
     created = 0
     try:
         with transaction.atomic():
@@ -443,6 +445,31 @@ def run_import(spec, headers, rows, include_samples=False):
     except _Rollback:
         return {"created": 0, "errors": errors, "total": len(valid), **base}
     return {"created": created, "errors": [], "total": created, **base}
+
+
+def _save_rows_separately(spec, valid, base):
+    """Turso closes a write transaction after a few seconds, and each statement in one is a network round trip,
+    so one transaction around a whole file fails part-way. Save each row in its own transaction instead and,
+    if a row fails, delete the rows this import added so that still nothing is saved."""
+    added, errors = [], []
+    for row_no, form in valid:
+        instance = getattr(form, "instance", None)
+        is_new = instance is not None and instance.pk is None
+        try:
+            with transaction.atomic():
+                spec.save(form)
+        except IntegrityError:
+            errors.append((row_no, "Duplicate: conflicts with another row in this file or an existing "
+                                   "record (uniqueness rule)."))
+            break
+        if is_new:
+            added.append(form.instance)
+    if errors:
+        for obj in reversed(added):
+            with transaction.atomic():
+                obj.delete()
+        return {"created": 0, "errors": errors, "total": len(valid), **base}
+    return {"created": len(valid), "errors": [], "total": len(valid), **base}
 
 
 # --------------------------------------------------------------------------- templates & field guide
