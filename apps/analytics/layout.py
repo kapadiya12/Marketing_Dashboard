@@ -36,6 +36,7 @@ KPI_CARDS = [
     ("consultants", "Consultant engagements"),
     ("investors", "Investor outreach progress"),
     ("social", "Digital marketing posts"),
+    ("calls", "Cold calls & messages"),
 ]
 
 

@@ -10,7 +10,7 @@ from .factories import ALL_RESOURCES, create_record, form_data
 def test_all_nine_modules_registered():
     keys = [m.key for m in registry.modules()]
     assert keys == ["listings", "community", "seo", "advertising", "events", "outreach", "meetings",
-                    "consultants", "investors", "social"]
+                    "consultants", "investors", "social", "calls"]
     for m in registry.modules():
         assert m.primary_resource is not None
 

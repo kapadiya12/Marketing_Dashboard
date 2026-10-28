@@ -33,7 +33,7 @@ def test_seed_creates_six_products_and_dashboards_load(admin_user, login):
     for slug in ["proceaze", "shifteaze", "ricroot", "rcsl", "payeaze", "veracity", "nextedge"]:
         resp = client.get(reverse("products:dashboard", args=[slug]))
         assert resp.status_code == 200
-        assert len(resp.context["module_cards"]) == 10
+        assert len(resp.context["module_cards"]) == 11
 
 
 def test_kpis_reflect_database(admin_user, products, platform, login):

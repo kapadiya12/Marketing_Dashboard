@@ -181,7 +181,9 @@ for _m in [
            "Prospective investor research, outreach and fundraising pipeline."),
     Module("social", 10, "Digital Marketing Posts", "Digital Marketing", "bi-share",
            "Posts on LinkedIn, Instagram, X (Twitter), Facebook, YouTube and other social platforms."),
-    Module("tasks", 11, "Tasks & Follow-ups", "Tasks", "bi-check2-square",
+    Module("calls", 11, "Cold Calls & Messages", "Cold Calls", "bi-telephone-outbound",
+           "Cold calls and direct messages (WhatsApp, LinkedIn, SMS) to prospects, with outcomes and follow-ups."),
+    Module("tasks", 12, "Tasks & Follow-ups", "Tasks", "bi-check2-square",
            "Unified tasks, reminders and follow-ups.", is_activity_module=False),
 ]:
     registry.register_module(_m)

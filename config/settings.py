@@ -78,6 +78,7 @@ INSTALLED_APPS = [
     "apps.consultants",
     "apps.investors",
     "apps.social_media",
+    "apps.cold_calls",
 ]
 
 MIDDLEWARE = [

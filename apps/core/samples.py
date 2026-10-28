@@ -85,6 +85,12 @@ SAMPLES = {
         {"title": "How a manufacturer cut purchase approvals from 5 days to 1", "post_url": "https://www.linkedin.com/posts/example-1"},
         {"title": "3 tips to plan rotating shifts without spreadsheets", "post_url": "https://www.instagram.com/p/example-2"},
     ],
+    "calls": [
+        {"contact_name": "Example Sharma", "company": "Example Industries", "phone": "+91 90000 00000",
+         "notes": "Asked for a callback next week about purchase approvals."},
+        {"contact_name": "Example Rao", "company": "Example Logistics",
+         "phone": "https://www.linkedin.com/in/example-profile", "notes": ""},
+    ],
     "tasks": [
         {"title": "Send proposal to Example Industries", "description": "Include pricing for 50 users."},
         {"title": "Update G2 listing screenshots", "description": ""},

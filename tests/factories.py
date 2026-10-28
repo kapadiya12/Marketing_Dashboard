@@ -25,6 +25,8 @@ def form_data(resource_key, product, platform=None, suffix="1"):
         "consultants": {"name": f"Advisor {suffix}", "status": "identified"},
         "investors": {"name": f"Fund {suffix}", "status": "researching", "funding_status": "not_discussed"},
         "tasks": {"title": f"Task {suffix}", "priority": "medium", "status": "todo"},
+        "calls": {"channel": "phone", "contact_name": f"Contact {suffix}", "contact_date": "2026-10-28",
+                  "outcome": "no_answer", "status": "to_contact"},
         "social": {"platform": "linkedin", "post_type": "post", "title": f"Post {suffix}", "status": "draft",
                    "likes": "0", "comments": "0", "shares": "0", "reach": "0"},
     }[resource_key]
@@ -60,4 +62,4 @@ def create_record(resource_key, product, platform=None, suffix="1", **overrides)
 
 
 ALL_RESOURCES = ["listings", "community", "seo", "advertising", "events", "outreach", "email_campaigns", "leads",
-                 "meetings", "consultants", "investors", "social", "tasks"]
+                 "meetings", "consultants", "investors", "social", "calls", "tasks"]

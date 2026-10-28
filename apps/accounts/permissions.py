@@ -19,7 +19,7 @@ from django.db.models import Q
 LEVELS = {"none": 0, "read": 1, "write": 2, "manage": 3}
 
 MARKETING_MODULES = {"listings", "community", "seo", "advertising", "events", "outreach", "social"}
-SALES_MODULES = {"outreach", "meetings", "consultants", "investors", "events"}
+SALES_MODULES = {"outreach", "calls", "meetings", "consultants", "investors", "events"}
 
 ROLE_DEFAULTS = {
     "product_manager": lambda module: "manage",

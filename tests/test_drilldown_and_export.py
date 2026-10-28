@@ -135,7 +135,7 @@ def test_dashboard_charts_are_clickable(admin_user, products, platform, login):
     _populate(products[0], platform)
     client = login(admin_user)
     charts = {c["id"]: c for c in client.get(reverse("analytics:dashboard")).context["charts"]}
-    assert len(charts["activity_by_module"]["links"]) == 10
+    assert len(charts["activity_by_module"]["links"]) == 11
     assert charts["product_comparison"]["links"]
     for link in charts["activity_by_module"]["links"]:
         assert client.get(link).status_code == 200

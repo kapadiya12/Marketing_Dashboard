@@ -21,7 +21,7 @@ from . import layout
 User = get_user_model()
 
 PRIMARY_KEYS = ["listings", "community", "seo", "advertising", "events", "outreach", "meetings", "consultants",
-                "social",
+                "social", "calls",
                 "investors"]
 
 
@@ -120,6 +120,11 @@ class DashboardData:
         k["social_published"] = self.pqs("social").filter(m.completed_q("social")).count()
         k["social_engagement"] = sum((social[x] or 0) for x in ("likes", "comments", "shares"))
         k["social_reach"] = social["reach"] or 0
+
+        calls = self.pqs("calls")
+        k["calls"] = calls.count()
+        k["calls_interested"] = calls.filter(outcome__in=["interested", "meeting"]).count()
+        k["calls_meetings"] = calls.filter(outcome="meeting").count()
         return k
 
     # -- drill-down URLs ---------------------------------------------------
@@ -191,6 +196,9 @@ class DashboardData:
                             hint=f"Published of {k['social_posts']} · {k['social_engagement']:,} engagements · "
                                  f"{k['social_reach']:,} reach", key="social",
                             url=self.list_url("social", period=True, state="completed")),
+            "calls": m.kpi("Cold calls & messages", k["calls"], "bi-telephone-outbound", "teal",
+                           hint=f"{k['calls_interested']} interested · {k['calls_meetings']} meetings booked",
+                           key="calls", url=self.list_url("calls", period=True)),
         }
         visible = layout.visible_keys(layout.kpi_cards(self.product))
         return [cards[key] for key in visible if key in cards]
