@@ -6,13 +6,14 @@ attachments and inline child records.
 """
 import calendar as pycal
 import datetime
+from contextlib import nullcontext
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
-from django.db import transaction
+from django.db import connection, transaction
 from django.db.models import ProtectedError, Q
 from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -573,7 +574,9 @@ def bulk_action(request, resource):
     count = qs.count()
     if count != len(set(ids)):
         messages.warning(request, f"{len(set(ids)) - count} selected record(s) skipped: insufficient permission.")
-    with transaction.atomic():
+    # Turso closes a write transaction after a few seconds and every statement in it is a network round trip,
+    # so there each record commits on its own instead of the whole selection in one transaction.
+    with nullcontext() if getattr(connection, "is_remote", False) else transaction.atomic():
         if action == "archive":
             for obj in qs:
                 obj.archive(request.user)

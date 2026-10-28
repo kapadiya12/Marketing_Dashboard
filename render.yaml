@@ -9,7 +9,7 @@ services:
     region: singapore
     buildCommand: ./build.sh
     startCommand: gunicorn config.wsgi:application -c gunicorn.conf.py
-    healthCheckPath: /accounts/login/
+    healthCheckPath: /healthz
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.10
@@ -34,8 +34,9 @@ services:
         sync: false
       - key: DJANGO_TIME_ZONE
         value: Asia/Kolkata
+      # One request per worker on Turso (gunicorn.conf.py), so three workers (~70 MB each) serve in parallel.
       - key: GUNICORN_WORKERS
-        value: "2"
+        value: "3"
       - key: FORWARDED_ALLOW_IPS
         value: "*"
       # First administrator, created on the first deploy if it does not exist yet.

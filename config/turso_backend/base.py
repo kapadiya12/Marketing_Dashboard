@@ -225,7 +225,8 @@ def _sync_replicas(sender, environ=None, **kwargs):
     from django.conf import settings
     from django.db import connections
 
-    if environ and environ.get("PATH_INFO", "").startswith(settings.STATIC_URL):
+    path = (environ or {}).get("PATH_INFO", "")
+    if path.startswith(settings.STATIC_URL) or path == "/healthz":
         return
     for conn in connections.all(initialized_only=True):
         if isinstance(conn, DatabaseWrapper):

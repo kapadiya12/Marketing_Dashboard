@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.http import HttpResponse
 from django.urls import include, path
 from django.views.generic import RedirectView
 
@@ -10,7 +11,13 @@ from apps.core.views import import_hub
 admin.site.site_header = "Business Dashboard — Maintenance"
 admin.site.site_title = "Business Dashboard Admin"
 
+def healthz(request):
+    """Render's health check: answers without touching the database (no Turso sync either)."""
+    return HttpResponse("ok", content_type="text/plain")
+
+
 urlpatterns = [
+    path("healthz", healthz, name="healthz"),
     path("", RedirectView.as_view(pattern_name="analytics:dashboard", permanent=False)),
     path("admin/", admin.site.urls),
     path("accounts/", include("apps.accounts.urls")),

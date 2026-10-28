@@ -218,3 +218,20 @@ def test_listing_platform_typed_as_text(admin_user, products, platform, login):
     rec = ListingRecord.objects.get(platform=new)
     page = client.get(reverse("records:edit", args=["listings", rec.pk])).content.decode()
     assert 'value="My New Directory"' in page
+
+
+def test_bulk_delete_on_turso_commits_record_by_record(admin_user, products, login, monkeypatch):
+    """Turso closes long write transactions, so a bulk action there runs without one around the selection."""
+    from types import SimpleNamespace
+
+    from apps.core import views
+    from apps.tasks.models import Task
+
+    monkeypatch.setattr(views, "connection", SimpleNamespace(is_remote=True))
+    monkeypatch.setattr(views, "transaction", SimpleNamespace(
+        atomic=lambda *a, **k: pytest.fail("bulk action opened a transaction")))
+    t1 = create_record("tasks", products[0], suffix="a")
+    t2 = create_record("tasks", products[0], suffix="b")
+    resp = login(admin_user).post(reverse("records:bulk", args=["tasks"]), {"ids": [t1.pk, t2.pk], "action": "delete"})
+    assert resp.status_code == 302
+    assert not Task.objects.filter(pk__in=[t1.pk, t2.pk]).exists()

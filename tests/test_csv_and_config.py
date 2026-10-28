@@ -231,3 +231,8 @@ def test_import_on_turso_undoes_added_rows_when_one_fails(admin_user, products, 
     result = importing._save_rows_separately(spec, forms_, {"skipped": 0, "adjustments": []})
     assert result["created"] == 0 and result["errors"][0][0] == 3
     assert Task.objects.count() == 0
+
+
+def test_health_check_needs_no_login_or_database(client):
+    resp = client.get("/healthz")  # no database fixture: any query would fail the test
+    assert resp.status_code == 200 and resp.content == b"ok"
