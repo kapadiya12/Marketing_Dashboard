@@ -6,6 +6,7 @@ the application works on an empty database.
 from dataclasses import dataclass
 
 from .registry import registry
+from .request_cache import memo
 
 
 @dataclass(frozen=True)
@@ -28,13 +29,18 @@ def _defaults(resource_key):
 
 
 def get_statuses(resource_key, include_inactive=False):
+    rows = [info for info, active in memo("statuses", _load_all).get(resource_key, []) if include_inactive or active]
+    return rows or _defaults(resource_key)
+
+
+def _load_all():
+    """{resource: [(StatusInfo, is_active), ...]} for every resource in one query (cached per request)."""
     from .models import StatusOption
 
-    qs = StatusOption.objects.filter(resource=resource_key)
-    if not include_inactive:
-        qs = qs.filter(is_active=True)
-    rows = [StatusInfo(s.key, s.label, s.state, s.color, s.order) for s in qs.order_by("order", "label")]
-    return rows or _defaults(resource_key)
+    out = {}
+    for s in StatusOption.objects.order_by("order", "label"):
+        out.setdefault(s.resource, []).append((StatusInfo(s.key, s.label, s.state, s.color, s.order), s.is_active))
+    return out
 
 
 def get_status(resource_key, key):

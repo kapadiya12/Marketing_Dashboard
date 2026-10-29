@@ -16,6 +16,8 @@ Every view, export, report, search and API endpoint obtains its querysets via
 """
 from django.db.models import Q
 
+from apps.core.request_cache import memo
+
 LEVELS = {"none": 0, "read": 1, "write": 2, "manage": 3}
 
 MARKETING_MODULES = {"listings", "community", "seo", "advertising", "events", "outreach", "social"}
@@ -61,22 +63,21 @@ def _membership_map(user):
 
 
 def _disabled_modules(product_id):
-    from apps.products.models import ProductModuleConfiguration
-
-    return set(
-        ProductModuleConfiguration.objects.filter(product_id=product_id, is_enabled=False).values_list(
-            "module", flat=True
-        )
-    )
+    return _disabled_map().get(product_id, set())
 
 
 def _disabled_map():
+    """{product_id: {disabled module, ...}}, read once per request."""
     from apps.products.models import ProductModuleConfiguration
 
-    out = {}
-    for pid, module in ProductModuleConfiguration.objects.filter(is_enabled=False).values_list("product_id", "module"):
-        out.setdefault(pid, set()).add(module)
-    return out
+    def load():
+        out = {}
+        for pid, module in ProductModuleConfiguration.objects.filter(is_enabled=False).values_list(
+                "product_id", "module"):
+            out.setdefault(pid, set()).add(module)
+        return out
+
+    return memo("disabled_modules", load)
 
 
 def module_level(user, product, module):
@@ -119,7 +120,7 @@ def product_ids_for(user, module, level="read"):
         return []
     disabled = _disabled_map() if module != "tasks" else {}
     if is_org_admin(user):
-        ids = Product.objects.values_list("pk", flat=True)
+        ids = memo("product_ids", lambda: list(Product.objects.values_list("pk", flat=True)))
         return [pid for pid in ids if module not in disabled.get(pid, set())]
     out = []
     for pid, entry in _membership_map(user).items():

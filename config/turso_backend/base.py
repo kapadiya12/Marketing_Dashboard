@@ -14,7 +14,10 @@ path) and ``OPTIONS: {"auth_token": ...}``; other driver arguments (``timeout``)
 
 Remote mode costs several network round trips per query. With ``OPTIONS["replica_dir"]`` set, each connection
 instead keeps an embedded replica in that directory: reads are local, writes are forwarded to Turso, and the
-replica syncs at the start of every request so changes made by other processes are visible.
+replica syncs at the start of a request when another connection has written since its last sync, so their
+changes are visible. Writes touch a marker file in the replica directory (every worker process on the server
+shares it); a sync costs a network round trip during which the driver holds the whole process, so requests
+that follow only reads skip it. Writes from elsewhere (another server, a script) show within ``SYNC_EVERY``.
 """
 import datetime
 import decimal
@@ -23,6 +26,7 @@ import os
 import re
 import sqlite3
 import threading
+import time
 import uuid
 from collections.abc import Mapping
 
@@ -110,21 +114,35 @@ def _convert(query, params):
     return query.replace("%%", "%"), tuple(adapt(v) for v in params)
 
 
+SYNC_EVERY = 30  # seconds: the longest a replica goes without a sync, for writes the marker can't see
+WRITE_MARKER = ".last-write"
+_READS = ("SELECT", "PRAGMA", "EXPLAIN", "BEGIN", "SAVEPOINT", "RELEASE", "ROLLBACK")
+
+
+def _writes(query):
+    return not query.lstrip().upper().startswith(_READS)
+
+
 class CursorWrapper:
-    def __init__(self, cursor):
+    def __init__(self, cursor, on_write=None):
         self.cursor = cursor
+        self.on_write = on_write
 
     def execute(self, query, params=None):
         if params is None:
             _call(self.cursor.execute, query)
         else:
             _call(self.cursor.execute, *_convert(query, params))
+        if self.on_write and _writes(query):
+            self.on_write()
         return self
 
     def executemany(self, query, param_list):
         converted = [_convert(query, params) for params in param_list]
         if converted:
             _call(self.cursor.executemany, converted[0][0], [values for _, values in converted])
+            if self.on_write:
+                self.on_write()
         return self
 
     def __iter__(self):
@@ -135,17 +153,20 @@ class CursorWrapper:
 
 
 class Connection:
-    def __init__(self, connection):
+    def __init__(self, connection, on_write=None):
         self.connection = connection
+        self.on_write = on_write
 
     def cursor(self):
-        return CursorWrapper(_call(self.connection.cursor))
+        return CursorWrapper(_call(self.connection.cursor), self.on_write)
 
     def execute(self, query, params=None):
         return self.cursor().execute(query, params)
 
     def commit(self):
         _call(self.connection.commit)
+        if self.on_write:
+            self.on_write()
 
     def rollback(self):
         _call(self.connection.rollback)
@@ -189,11 +210,23 @@ class DatabaseWrapper(sqlite_base.DatabaseWrapper):
             database = os.path.join(replica_dir, f"{self.alias}-{os.getpid()}-{threading.get_ident()}.db")
         return {"database": database, "isolation_level": None, "_check_same_thread": False, **options}
 
+    @property
+    def write_marker(self):
+        return os.path.join(self.settings_dict["OPTIONS"]["replica_dir"], WRITE_MARKER)
+
+    def mark_write(self):
+        """Tell the other connections on this server that the database changed."""
+        try:
+            with open(self.write_marker, "a"):
+                os.utime(self.write_marker, None)
+        except OSError:
+            logger.warning("Could not touch the Turso write marker; other workers sync on their timer.")
+
     @async_unsafe
     def get_new_connection(self, conn_params):
-        conn = Connection(_call(Database.connect, **conn_params))
+        conn = Connection(_call(Database.connect, **conn_params), self.mark_write if self.is_replica else None)
         if self.is_replica:
-            _call(conn.connection.sync)
+            self._sync(conn)
         conn.execute("PRAGMA foreign_keys = ON")
         if not self.is_remote:  # a Turso server rejects this PRAGMA; it already behaves as OFF
             conn.execute("PRAGMA legacy_alter_table = OFF")
@@ -215,10 +248,25 @@ class DatabaseWrapper(sqlite_base.DatabaseWrapper):
             return False
         return True
 
+    def _sync(self, conn):
+        # A write that lands during the sync makes the next request sync again. File times are only accurate to a
+        # clock tick (a few ms on Linux), hence the margin.
+        started = time.time_ns() - 50_000_000
+        _call(conn.connection.sync)
+        self._synced_ns, self._synced_at = started, time.monotonic()
+
+    def needs_sync(self):
+        if time.monotonic() - getattr(self, "_synced_at", 0) >= SYNC_EVERY:
+            return True
+        try:
+            return os.stat(self.write_marker).st_mtime_ns >= self._synced_ns
+        except OSError:  # no write on this server yet
+            return False
+
     def sync_replica(self):
-        """Pull changes made through other connections into this connection's replica."""
-        if self.is_replica and self.connection is not None and not self.in_atomic_block:
-            _call(self.connection.connection.sync)
+        """Pull changes made through other connections into this connection's replica, when there are any."""
+        if self.is_replica and self.connection is not None and not self.in_atomic_block and self.needs_sync():
+            self._sync(self.connection)
 
 
 def _sync_replicas(sender, environ=None, **kwargs):

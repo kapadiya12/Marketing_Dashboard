@@ -51,18 +51,27 @@ class DashboardData:
         resource = registry.get(key)
         return apply_period(self.qs(key), resource.date_field, self.period)
 
+    def counts(self, key):
+        """Total / completed / pending in the period and overdue overall, in two queries (KPIs and module cards)."""
+        ck = ("counts", key)
+        if ck not in self._cache:
+            c = self.pqs(key).aggregate(total=Count("pk"), completed=Count("pk", filter=m.completed_q(key)),
+                                        pending=Count("pk", filter=m.open_q(key)))
+            c["overdue"] = self.qs(key).filter(m.overdue_q(registry.get(key))).count()
+            self._cache[ck] = c
+        return self._cache[ck]
+
     # -- KPIs ------------------------------------------------------------
     def kpis(self):
         k = {}
         k["products"] = len(self.products)
         activities = completed = pending = overdue_followups = 0
         for key in PRIMARY_KEYS:
-            res = registry.get(key)
-            p = self.pqs(key)
-            activities += p.count()
-            completed += p.filter(m.completed_q(key)).count()
-            pending += p.filter(m.open_q(key)).count()
-            overdue_followups += self.qs(key).filter(m.overdue_q(res)).count()
+            c = self.counts(key)
+            activities += c["total"]
+            completed += c["completed"]
+            pending += c["pending"]
+            overdue_followups += c["overdue"]
         tasks = self.qs("tasks")
         overdue_tasks = tasks.filter(m.overdue_q(registry.get("tasks"))).count()
         k.update(activities=activities, completed=completed, pending=pending,
@@ -255,14 +264,11 @@ class DashboardData:
             res = module.primary_resource
             if res is None:
                 continue
-            q = self.pqs(res.key)
-            total = q.count()
-            done = q.filter(m.completed_q(res.key)).count()
+            c = self.counts(res.key)
             cards.append({
-                "module": module, "resource": res, "total": total, "completed": done,
-                "pending": q.filter(m.open_q(res.key)).count(),
-                "overdue": self.qs(res.key).filter(m.overdue_q(res)).count(),
-                "pct": m.pct(done, total),
+                "module": module, "resource": res, "total": c["total"], "completed": c["completed"],
+                "pending": c["pending"], "overdue": c["overdue"],
+                "pct": m.pct(c["completed"], c["total"]),
                 "urls": {
                     "total": self.list_url(res.key, period=True),
                     "completed": self.list_url(res.key, period=True, state="completed"),

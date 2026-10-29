@@ -302,6 +302,27 @@
     if (btn && btn.dataset.idleHtml !== undefined) { btn.disabled = false; btn.innerHTML = btn.dataset.idleHtml; delete btn.dataset.idleHtml; }
     if (form) delete form.dataset.submitting;
   }
+  // Sidebar links start loading when the pointer rests on one (or a finger touches it), so the page is
+  // usually on its way before the click. One at a time, each page once.
+  const prefetched = new Set();
+  let prefetchTimer = null;
+  function prefetch(a) {
+    if (!a || prefetched.has(a.href) || a.origin !== window.location.origin || a.target || a.hasAttribute("download")
+        || a.href === window.location.href || /[?&]format=|\/logout|\/email-marketing\//.test(a.href)) return;
+    prefetched.add(a.href);
+    const l = document.createElement("link");
+    l.rel = "prefetch"; l.href = a.href; l.as = "document";
+    document.head.appendChild(l);
+  }
+  document.addEventListener("mouseover", function (e) {
+    const a = e.target.closest && e.target.closest(".sidebar a[href]");
+    clearTimeout(prefetchTimer);
+    if (a) prefetchTimer = setTimeout(() => prefetch(a), 80);
+  });
+  document.addEventListener("touchstart", function (e) {
+    prefetch(e.target.closest && e.target.closest(".sidebar a[href]"));
+  }, { passive: true });
+
   // Back/forward restores a page from cache with its buttons still spinning.
   window.addEventListener("pageshow", function (e) {
     if (!e.persisted) return;
