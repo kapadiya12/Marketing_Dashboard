@@ -18,6 +18,21 @@ class StatusInfo:
     order: int = 0
 
 
+DONE_WORDS = {"completed", "complete", "done", "finished", "live", "approved", "published", "posted", "achieved",
+              "attended", "engaged", "committed", "won", "delivered", "listed"}
+DROPPED_WORDS = {"rejected", "cancelled", "canceled", "lost", "declined", "dropped", "failed"}
+
+
+def guess_state(label):
+    """(state, color) for a status first seen in an import: "Completed" or "Done" counts as done, not open."""
+    words = set(label.lower().replace("-", " ").replace("_", " ").split())
+    if words & DONE_WORDS and "not" not in words:
+        return "completed", "success"
+    if words & DROPPED_WORDS:
+        return "closed", "danger"
+    return "open", "info"
+
+
 def _defaults(resource_key):
     resource = registry.get(resource_key)
     if not resource:

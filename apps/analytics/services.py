@@ -28,10 +28,11 @@ PRIMARY_KEYS = ["listings", "community", "seo", "advertising", "events", "outrea
 # The four figures on each module card of a product dashboard: (KPI label from the module's resources.py, card
 # caption). The module's own measures (coverage, reach, spend, pipeline…) rather than the same counts everywhere.
 CARD_STATS = {
-    "listings": [("Tracked listings", "listings"), ("Approved", "approved"), ("Submitted / in review", "in review"),
+    "listings": [("Tracked listings", "listings"), ("Approved", "completed"), ("Submitted / in review", "in review"),
                  ("Platform coverage", "coverage")],
-    "community": [("Questions", "questions"), ("Answered", "answered"), ("Upvotes", "upvotes"), ("Views", "views")],
-    "seo": [("Tracked keywords", "keywords"), ("On target", "on target"), ("Target completion", "completion"),
+    "community": [("Questions", "questions"), ("Answered", "answered"), ("Published", "published"),
+                  ("Upvotes", "upvotes")],
+    "seo": [("Tracked keywords", "keywords"), ("On target", "on target"), ("Achieved", "achieved"),
             ("SEO / GEO updates", "updates")],
     "advertising": [("Campaigns", "campaigns"), ("Actual spend", "spend"), ("Clicks", "clicks"), ("Leads", "leads")],
     "events": [("Events tracked", "events"), ("Upcoming", "upcoming"), ("Attended", "attended"),

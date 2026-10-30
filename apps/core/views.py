@@ -39,7 +39,7 @@ from .models import Attachment, CustomFieldDefinition, ModuleSetting, Tag
 from .notifications import notify_assignment
 from .periods import PERIODS, resolve_period
 from .registry import registry
-from .statuses import get_status, get_statuses
+from .statuses import get_status, get_statuses, guess_state
 
 
 # --------------------------------------------------------------------------- helpers
@@ -711,15 +711,16 @@ def resource_import_spec(request, resource, product=None):
     can_add_statuses = is_org_admin(user) or bool(product_ids_for(user, resource.module, "manage"))
 
     def create_status(text):
-        """Add a new open status for this module (only for people who manage it)."""
+        """Add a new status for this module (only for people who manage it); "Completed", "Done"... count as done."""
         if not can_add_statuses:
             return None
         key = slugify(text).replace("-", "_")[:40] or None
         if not key:
             return None
+        state, color = guess_state(text)
         StatusOption.objects.get_or_create(
             resource=resource.key, key=key,
-            defaults={"label": text.strip()[:60], "state": "open", "color": "info", "order": 50})
+            defaults={"label": text.strip()[:60], "state": state, "color": color, "order": 50})
         if not StatusOption.objects.filter(resource=resource.key).exclude(key=key).exists():
             # first custom status: materialise the defaults too so they stay available
             for i, (k, label, state, color) in enumerate(resource.default_statuses):
