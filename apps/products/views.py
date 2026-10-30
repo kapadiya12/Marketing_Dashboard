@@ -42,7 +42,7 @@ def product_dashboard(request, slug):
         res_key, params = METRIC_LINKS.get(t["target"].metric, (None, {}))
         if res_key and levels.get(registry.get(res_key).module, "none") != "none":
             t["url"] = data.list_url(res_key, **params)
-    module_cards = [c for c in data.module_cards() if levels.get(c["module"].key, "none") != "none"]
+    module_cards = [c for c in data.module_cards(stats=True) if levels.get(c["module"].key, "none") != "none"]
     for c in module_cards:
         c["can_write"] = levels.get(c["module"].key) in ("write", "manage")
         if c["module"].key == email_marketing.MODULE and email_marketing.can_open(request.user, product):

@@ -152,3 +152,20 @@ def test_dashboard_seo_geo_updates_box(admin_user, products, login):
     for url in (reverse("analytics:dashboard"), reverse("products:dashboard", args=[a.slug])):
         card = next(c for c in client.get(url).context["kpi_cards"] if c["key"] == "seo")
         assert card["label"] == "SEO / GEO updates" and card["value"] == 2 and card["url"].endswith("#seo-updates")
+
+
+def test_module_cards_show_each_modules_own_figures(admin_user, products, login):
+    from apps.analytics.services import CARD_STATS
+
+    create_record("calls", products[0], suffix="a", outcome="interested")
+    create_record("advertising", products[0], suffix="a", actual_spend=Decimal("1200"), clicks=40)
+    resp = login(admin_user).get(reverse("products:dashboard", args=[products[0].slug]))
+    cards = {c["module"].key: c for c in resp.context["module_cards"]}
+    for key, wanted in CARD_STATS.items():
+        assert [s["caption"] for s in cards[key]["stats"]] == [caption for _, caption in wanted], key
+    calls = {s["caption"]: s for s in cards["calls"]["stats"]}
+    assert calls["calls"]["value"] == 1 and calls["interested"]["value"] == 1
+    assert "preset=positive" in calls["interested"]["url"] and products[0].slug in calls["interested"]["url"]
+    ads = {s["caption"]: s for s in cards["advertising"]["stats"]}
+    assert ads["spend"]["value"] == Decimal("1200") and ads["clicks"]["value"] == 40
+    assert b"spend</a>" in resp.content and b"interested</a>" in resp.content

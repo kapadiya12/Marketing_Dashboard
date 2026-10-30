@@ -25,6 +25,33 @@ PRIMARY_KEYS = ["listings", "community", "seo", "advertising", "events", "outrea
                 "investors"]
 
 
+# The four figures on each module card of a product dashboard: (KPI label from the module's resources.py, card
+# caption). The module's own measures (coverage, reach, spend, pipeline…) rather than the same counts everywhere.
+CARD_STATS = {
+    "listings": [("Tracked listings", "listings"), ("Approved", "approved"), ("Submitted / in review", "in review"),
+                 ("Platform coverage", "coverage")],
+    "community": [("Questions", "questions"), ("Answered", "answered"), ("Upvotes", "upvotes"), ("Views", "views")],
+    "seo": [("Tracked keywords", "keywords"), ("On target", "on target"), ("Target completion", "completion"),
+            ("SEO / GEO updates", "updates")],
+    "advertising": [("Campaigns", "campaigns"), ("Actual spend", "spend"), ("Clicks", "clicks"), ("Leads", "leads")],
+    "events": [("Events tracked", "events"), ("Upcoming", "upcoming"), ("Attended", "attended"),
+               ("Leads collected", "leads")],
+    "outreach": [("Emails tracked", "emails"), ("Sent", "sent"), ("Replies", "replies"),
+                 ("Meetings booked", "meetings")],
+    "meetings": [("Meetings", "meetings"), ("Upcoming", "upcoming"), ("Completed", "completed"),
+                 ("Pipeline value", "pipeline")],
+    "consultants": [("Consultants", "consultants"), ("In discussion", "in discussion"), ("Engaged", "engaged"),
+                    ("Follow-ups overdue", "overdue")],
+    "investors": [("Investors tracked", "investors"), ("Meetings / pitches", "pitches"),
+                  ("Committed (recorded)", "committed"), ("Funding target", "target")],
+    "social": [("Posts", "posts"), ("Published", "published"), ("Reach / views", "reach"),
+               ("Engagement", "engagement")],
+    "calls": [("Calls & messages", "calls"), ("Reached", "reached"), ("Interested", "interested"),
+              ("Meetings booked", "meetings")],
+}
+TONE_CLASS = {"success": "text-success", "warning": "text-warning", "info": "text-info", "danger": "text-danger"}
+
+
 class DashboardData:
     def __init__(self, user, products, period, product=None):
         self.user = user
@@ -255,7 +282,36 @@ class DashboardData:
         return sections
 
     # -- module summaries --------------------------------------------------
-    def module_cards(self):
+    def card_stats(self, res, module_key):
+        """The module card's four figures (CARD_STATS), each linking to the records behind it."""
+        if not res.kpis or module_key not in CARD_STATS:
+            return []
+        ctx = {"product_count": len(self.products), "seo_updates": self._seo_updates()}
+        by_label = {k["label"]: k for k in res.kpis(self.pqs(res.key), ctx)}
+        stats = []
+        for label, caption in CARD_STATS[module_key]:
+            k = by_label.get(label)
+            if k is None:
+                continue
+            if k["url"]:
+                url = (self.list_url(res.key, period=True) + k["url"]) if k["url"].startswith("#") else k["url"]
+            else:
+                url = self.list_url(res.key, period=True, **(k["link"] or {}))
+            tone = "" if k["tone"] == "danger" and not k["value"] else TONE_CLASS.get(k["tone"], "")
+            stats.append({"caption": caption, "value": k["value"], "fmt": k["fmt"], "url": url, "tone": tone,
+                          "hint": k["hint"]})
+        return stats
+
+    def _seo_updates(self):
+        if "seo_updates" not in self._cache:
+            from apps.seo_optimization.models import SEOUpdate
+
+            ids = [self.product.pk] if self.product else [
+                pid for pid in self.product_ids if pid in set(product_ids_for(self.user, "seo", "read"))]
+            self._cache["seo_updates"] = SEOUpdate.objects.filter(product_id__in=ids).count()
+        return self._cache["seo_updates"]
+
+    def module_cards(self, stats=False):
         cards = []
         enabled = set(self.product.enabled_module_keys()) if self.product else None
         for module in registry.modules():
@@ -269,6 +325,7 @@ class DashboardData:
                 "module": module, "resource": res, "total": c["total"], "completed": c["completed"],
                 "pending": c["pending"], "overdue": c["overdue"],
                 "pct": m.pct(c["completed"], c["total"]),
+                "stats": self.card_stats(res, module.key) if stats else [],
                 "urls": {
                     "total": self.list_url(res.key, period=True),
                     "completed": self.list_url(res.key, period=True, state="completed"),

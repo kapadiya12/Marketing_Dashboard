@@ -1,4 +1,4 @@
-{% load ui %}
+{% load ui humanize %}
 {% for section in sections %}
   {% if section == "kpis" %}
     {% include "components/kpi_cards.html" with cards=kpi_cards %}
@@ -27,10 +27,14 @@
             {% else %}
             <div class="progress"><div class="progress-bar" data-width="{{ c.pct }}%" style="background:{{ product.brand_color }}"></div></div>
             <div class="stats">
+              {% for st in c.stats %}
+              <a class="stat-link" href="{{ st.url }}"{% if st.hint %} title="{{ st.hint }}"{% endif %}><strong class="{{ st.tone }}">{% if st.fmt == "currency" %}{{ st.value|money }}{% elif st.fmt == "percent" %}{{ st.value }}%{% else %}{{ st.value|intcomma }}{% endif %}</strong>{{ st.caption }}</a>
+              {% empty %}
               <a class="stat-link" href="{{ c.urls.total }}"><strong>{{ c.total }}</strong>tracked</a>
               <a class="stat-link" href="{{ c.urls.completed }}"><strong class="text-success">{{ c.completed }}</strong>completed</a>
               <a class="stat-link" href="{{ c.urls.pending }}"><strong class="text-warning">{{ c.pending }}</strong>pending</a>
               <a class="stat-link" href="{{ c.urls.overdue }}"><strong class="{% if c.overdue %}text-danger{% endif %}">{{ c.overdue }}</strong>overdue</a>
+              {% endfor %}
             </div>
             {% endif %}
           </div>
