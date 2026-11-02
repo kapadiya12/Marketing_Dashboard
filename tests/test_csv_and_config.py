@@ -251,3 +251,29 @@ def test_import_on_turso_undoes_added_rows_when_one_fails(admin_user, products, 
 def test_health_check_needs_no_login_or_database(client):
     resp = client.get("/healthz")  # no database fixture: any query would fail the test
     assert resp.status_code == 200 and resp.content == b"ok"
+
+
+def test_excel_with_title_row_imports_into_the_products_page(admin_user, products, login):
+    import io
+
+    from openpyxl import Workbook
+
+    from apps.seo_optimization.models import SEOTrackingRecord
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "SEO"
+    ws.append(["Our SEO tracker"])
+    ws.append([])
+    ws.append(["Sr No", "Product", "Keyword", "Rank", "Status"])
+    ws.append([1, "Some other name", "vendor portal", 12, "Done"])
+    for r in range(6, 600):  # formatted but empty rows, as Excel leaves them
+        ws.cell(row=r, column=3).number_format = "@"
+    buf = io.BytesIO()
+    wb.save(buf)
+    upload = SimpleUploadedFile("mine.xlsx", buf.getvalue())
+    url = reverse("products:record_import", args=[products[0].slug, "seo"])
+    assert login(admin_user).post(url, {"file": upload}).status_code == 302
+    rec = SEOTrackingRecord.objects.get(keyword="vendor portal")
+    assert rec.product == products[0] and rec.measured_ranking == 12 and "Sr No" not in rec.notes
+    assert StatusOption.objects.get(resource="seo", key="done").state == "completed"

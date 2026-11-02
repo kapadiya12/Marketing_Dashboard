@@ -692,8 +692,10 @@ def resource_import_spec(request, resource, product=None):
         return obj
 
     defaults = {"status": default_status(resource.key)}
+    fixed = {}
     if product is not None:
         defaults["product"] = product.slug
+        fixed["product"] = product.slug  # on a product's page every row goes to that product
 
     from django.utils.text import slugify
 
@@ -771,6 +773,7 @@ def resource_import_spec(request, resource, product=None):
         creators=creators,
         note_field=next((f for f in ("notes", "meeting_notes") if f in resource.form_fields), None),
         match_existing=match_existing,
+        fixed=fixed,
     )
 
 

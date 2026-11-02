@@ -55,6 +55,7 @@ class ImportSpec:
     creators: dict = field(default_factory=dict)  # field -> fn(text) creating the missing option (or None)
     note_field: Optional[str] = "notes"  # where unrecognised values are preserved
     match_existing: Optional[Callable] = None  # (cleaned row data) -> existing instance to update, or None
+    fixed: dict = field(default_factory=dict)  # column -> value used whatever the file says (a product's import page)
 
 
 # --------------------------------------------------------------------------- reading files
@@ -74,6 +75,9 @@ class UploadForm(forms.Form):
 
         f = self.cleaned_data["file"]
         ext = f.name.rsplit(".", 1)[-1].lower() if "." in f.name else ""
+        if ext in ("xls", "xlsm", "ods", "numbers"):
+            raise ValidationError(f"This is an older .{ext} file. Open it in Excel, choose File → Save As → "
+                                  "Excel Workbook (.xlsx), and upload that.")
         if ext not in IMPORT_EXTENSIONS:
             raise ValidationError("Upload a .csv or .xlsx file.")
         if f.size > settings.MAX_UPLOAD_SIZE:
@@ -102,8 +106,30 @@ def _cell_text(value):
     return str(value).strip()
 
 
-def read_table(uploaded):
-    """Return (headers, rows) where rows is a list of (spreadsheet_row_number, {header: text})."""
+BLANK_RUN = 200  # this many empty rows in a row end a sheet (Excel often "uses" formatted rows to the bottom)
+HEADER_SEARCH = 15  # the heading row can sit below a title or a blank row
+
+
+def _grid(rows):
+    """Rows of cell text, without the trailing empty ones and stopping at a long run of empty rows."""
+    out, blank = [], 0
+    for values in rows:
+        cells = [_cell_text(v) for v in values]
+        if any(cells):
+            out.extend([[]] * blank)
+            out.append(cells)
+            blank = 0
+        else:
+            blank += 1
+            if blank >= BLANK_RUN:
+                break
+    return out
+
+
+def read_table(uploaded, spec=None):
+    """Return (headers, rows) where rows is a list of (spreadsheet_row_number, {header: text}).
+    With a spec, the sheet and heading row that best match its columns are used (a workbook may start with a
+    title row, or keep the data on its second sheet); without one, the first row of the "Data" or first sheet."""
     name = uploaded.name.lower()
     raw = uploaded.read()
     if name.endswith(".xlsx"):
@@ -113,16 +139,8 @@ def read_table(uploaded):
             wb = load_workbook(io.BytesIO(raw), read_only=True, data_only=True)
         except Exception as exc:  # noqa: BLE001 - corrupt workbook
             raise ValueError(f"Could not read the Excel file: {exc}") from exc
-        ws = wb["Data"] if "Data" in wb.sheetnames else wb.worksheets[0]
-        it = ws.iter_rows(values_only=True)
-        try:
-            headers = [_cell_text(h) for h in next(it)]
-        except StopIteration:
-            raise ValueError("The sheet is empty.")
-        rows = []
-        for i, values in enumerate(it, start=2):
-            row = {h: _cell_text(v) for h, v in zip(headers, values) if h}
-            rows.append((i, row))
+        names = sorted(wb.sheetnames, key=lambda n: n != "Data")
+        sheets = [_grid(wb[n].iter_rows(values_only=True)) for n in names]
         wb.close()
     else:
         for encoding in ("utf-8-sig", "cp1252"):
@@ -133,13 +151,20 @@ def read_table(uploaded):
                 continue
         else:
             raise ValueError("The file is not valid UTF-8 text.")
-        reader = csv.reader(io.StringIO(text))
-        try:
-            headers = [h.strip().lstrip("﻿") for h in next(reader)]
-        except StopIteration:
-            raise ValueError("The file is empty.")
-        rows = [(i, {h: (v or "").strip() for h, v in zip(headers, values) if h})
-                for i, values in enumerate(reader, start=2)]
+        sheets = [_grid(csv.reader(io.StringIO(text)))]
+    sheets = [s for s in sheets if s]
+    if not sheets:
+        raise ValueError("The file is empty.")
+    grid, at = sheets[0], 0
+    if spec is not None:
+        best = 0
+        for sheet in sheets:
+            for i, cells in enumerate(sheet[:HEADER_SEARCH]):
+                score = len(match_headers(spec, [c for c in cells if c]))
+                if score > best:
+                    best, grid, at = score, sheet, i
+    headers = [h.lstrip("﻿").strip() for h in grid[at]]
+    rows = [(at + i + 2, {h: v.strip() for h, v in zip(headers, values) if h}) for i, values in enumerate(grid[at + 1:])]
     headers = [h for h in headers if h]
     if not headers:
         raise ValueError("The file has no header row.")
@@ -380,6 +405,9 @@ def _norm(text):
     return re.sub(r"[^a-z0-9]", "", str(text).lower())
 
 
+# Row numbers, not data: skipped rather than kept in notes.
+SERIAL_COLUMNS = {"", "no", "sno", "srno", "slno", "sr", "sl", "serial", "serialno", "number", "rowno", "id"}
+
 # Everyday names for columns (normalised), used when the template's own column exists.
 SYNONYMS = {
     "rank": "measured_ranking", "ranking": "measured_ranking", "position": "measured_ranking",
@@ -412,6 +440,8 @@ def match_headers(spec, headers):
             names.setdefault(alias, col)
     out, taken = {}, set()
     for h in headers:
+        if _norm(h) in SERIAL_COLUMNS and _norm(h) not in names:
+            continue
         col = names.get(_norm(h))
         if col and col not in taken:
             out[h] = col
@@ -429,12 +459,14 @@ def run_import(spec, headers, rows, include_samples=False, progress=None):
                                              f"Download the template for the accepted columns.")],
                 "skipped": 0, "total": 0, "adjustments": []}
     # Columns the module doesn't have are kept in the record's notes, so nothing in the file is lost.
-    extra = [h for h in headers if h not in matched]
+    extra = [h for h in headers if h not in matched and _norm(h) not in SERIAL_COLUMNS]
     keep_extra = bool(extra) and spec.note_field in spec.columns
-    if any(h != col for h, col in matched.items()) or extra:
+    if any(h != col for h, col in matched.items()) or extra or spec.fixed:
         renamed = []
         for row_no, row in rows:
             new = {col: row.get(h, "") for h, col in matched.items()}
+            if any(new.values()):
+                new.update(spec.fixed)
             if keep_extra:
                 kept = "; ".join(f"{h}: {row[h]}" for h in extra if row.get(h))
                 if kept:
@@ -860,7 +892,7 @@ def import_page(request, spec, audit=None, extra_context=None):
             return redirect(f"{request.path}?job={import_jobs.start(request, upload.cleaned_data['file'])}")
         if upload.is_valid():
             try:
-                headers, rows = read_table(upload.cleaned_data["file"])
+                headers, rows = read_table(upload.cleaned_data["file"], spec)
             except ValueError as exc:
                 upload.add_error("file", str(exc))
             else:
