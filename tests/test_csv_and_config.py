@@ -35,10 +35,25 @@ def test_csv_import_reports_invalid_rows_and_saves_nothing(admin_user, products,
     assert Task.objects.count() == 0
 
 
-def test_csv_import_unknown_columns_rejected(admin_user, products, login):
+def test_csv_import_unknown_columns_kept_in_notes(admin_user, products, login):
     client = login(admin_user)
     resp = client.post(reverse("records:import", args=["tasks"]), {"file": _csv("product,title,hack\nproceaze,x,y\n")})
-    assert resp.context["result"]["errors"][0][0] == 1
+    assert resp.status_code == 302 and "hack: y" in Task.objects.get(title="x").notes
+    resp = client.post(reverse("records:import", args=["tasks"]), {"file": _csv("foo,bar\n1,2\n")})
+    assert resp.context["result"]["errors"][0][0] == 1  # nothing in the file matches the module
+
+
+def test_seo_import_accepts_everyday_column_names(admin_user, products, login):
+    from apps.seo_optimization.models import SEOTrackingRecord
+
+    csv = ("Keyword,Search Engine,Current Rank,Target Rank,URL,Status,Search Volume\n"
+           "procurement software,Bing,14,3,https://example.com/p,In Progress,1900\n")
+    url = reverse("products:record_import", args=[products[0].slug, "seo"])
+    assert login(admin_user).post(url, {"file": _csv(csv)}).status_code == 302
+    rec = SEOTrackingRecord.objects.get(keyword="procurement software")
+    assert (rec.search_platform, rec.measured_ranking, rec.target_ranking) == ("bing", 14, 3)
+    assert rec.landing_page_url == "https://example.com/p" and rec.status == "in_progress"
+    assert "Search Volume: 1900" in rec.notes
 
 
 def test_export_reimport_roundtrip(admin_user, products, login):

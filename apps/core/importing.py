@@ -17,6 +17,8 @@ templates) are skipped unless the user chooses to import them as demo data.
 import csv
 import datetime
 import io
+import re
+import time
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
@@ -374,16 +376,77 @@ class _Rollback(Exception):
     pass
 
 
+def _norm(text):
+    return re.sub(r"[^a-z0-9]", "", str(text).lower())
+
+
+# Everyday names for columns (normalised), used when the template's own column exists.
+SYNONYMS = {
+    "rank": "measured_ranking", "ranking": "measured_ranking", "position": "measured_ranking",
+    "currentrank": "measured_ranking", "currentranking": "measured_ranking", "currentposition": "measured_ranking",
+    "targetrank": "target_ranking", "targetposition": "target_ranking",
+    "url": "landing_page_url", "pageurl": "landing_page_url", "page": "landing_page_url", "link": "landing_page_url",
+    "searchengine": "search_platform", "engine": "search_platform", "platform": "search_platform",
+    "type": "optimization_type", "optimisationtype": "optimization_type",
+    "owner": "assigned_to", "assignee": "assigned_to", "responsible": "assigned_to",
+    "note": "notes", "comment": "notes", "comments": "notes", "remark": "notes", "remarks": "notes",
+    "keywords": "keyword", "query": "keyword", "searchterm": "keyword",
+}
+
+
+def match_headers(spec, headers):
+    """{file header: template column} for the headers that name a column, matched loosely: case, spaces and
+    punctuation don't matter, and a column's label ("Keyword / query") or an everyday name ("Rank") works too."""
+    columns = list(spec.columns) + [c for c in spec.ignored_columns if c not in spec.columns]
+    names = {}
+    form = spec.form_factory(None)
+    for col in columns:
+        names.setdefault(_norm(col), col)
+        f = form.fields.get(col)
+        if f is not None and f.label:
+            names.setdefault(_norm(f.label), col)
+            for part in str(f.label).split("/"):
+                names.setdefault(_norm(part), col)
+    for alias, col in SYNONYMS.items():
+        if col in columns:
+            names.setdefault(alias, col)
+    out, taken = {}, set()
+    for h in headers:
+        col = names.get(_norm(h))
+        if col and col not in taken:
+            out[h] = col
+            taken.add(col)
+    return out
+
+
 def run_import(spec, headers, rows, include_samples=False, progress=None):
     """``progress(stage, done, total)`` is told how far it got (background imports show it)."""
     progress = progress or (lambda stage, done, total: None)
     rows = list(rows)
-    known = set(spec.columns) | set(spec.ignored_columns)
-    unknown = [h for h in headers if h not in known]
-    if unknown:
-        return {"created": 0, "errors": [(1, f"Unknown column(s): {', '.join(unknown)}. Download the template for "
-                                             f"the accepted columns.")], "skipped": 0, "total": 0, "adjustments": []}
+    matched = match_headers(spec, headers)
+    if not matched:
+        return {"created": 0, "errors": [(1, f"None of the columns ({', '.join(headers[:8])}) match this module. "
+                                             f"Download the template for the accepted columns.")],
+                "skipped": 0, "total": 0, "adjustments": []}
+    # Columns the module doesn't have are kept in the record's notes, so nothing in the file is lost.
+    extra = [h for h in headers if h not in matched]
+    keep_extra = bool(extra) and spec.note_field in spec.columns
+    if any(h != col for h, col in matched.items()) or extra:
+        renamed = []
+        for row_no, row in rows:
+            new = {col: row.get(h, "") for h, col in matched.items()}
+            if keep_extra:
+                kept = "; ".join(f"{h}: {row[h]}" for h in extra if row.get(h))
+                if kept:
+                    note = new.get(spec.note_field, "")
+                    new[spec.note_field] = f"{note}\n{kept}" if note else kept
+            renamed.append((row_no, new))
+        rows = renamed
     errors, valid, skipped, adjustments = [], [], 0, []
+    if extra:
+        where = "kept in notes" if keep_extra else "skipped"
+        adjustments.append((1, f"column(s) {', '.join(extra)} are not fields of this module and were {where}"))
+    headers = list(matched.values())
     for h in headers:
         if h in spec.ignored_columns and h not in ("id", "created_at", "updated_at"):
             adjustments.append((1, f"column “{h}” is no longer used and was skipped"))
@@ -452,24 +515,34 @@ def run_import(spec, headers, rows, include_samples=False, progress=None):
     return {"created": created, "errors": [], "total": created, **base}
 
 
+BATCH_ROWS = 25
+BATCH_SECONDS = 2
+
+
 def _save_rows_separately(spec, valid, base, progress=lambda stage, done, total: None):
     """Turso closes a write transaction after a few seconds, and each statement in one is a network round trip,
-    so one transaction around a whole file fails part-way. Save each row in its own transaction instead and,
-    if a row fails, delete the rows this import added so that still nothing is saved."""
-    added, errors = [], []
-    for saved, (row_no, form) in enumerate(valid, 1):
-        progress("Saving rows", saved, len(valid))
-        instance = getattr(form, "instance", None)
-        is_new = instance is not None and instance.pk is None
+    so one transaction around a whole file fails part-way. Save the rows in short transactions instead (a batch
+    of rows, closed well within that limit: BEGIN and COMMIT are round trips too) and, if a row fails, delete
+    the rows this import added so that still nothing is saved."""
+    added, errors, i = [], [], 0
+    while i < len(valid) and not errors:
+        batch, started = [], time.monotonic()
         try:
             with transaction.atomic():
-                spec.save(form)
+                while i < len(valid) and len(batch) < BATCH_ROWS and time.monotonic() - started < BATCH_SECONDS:
+                    row_no, form = valid[i]
+                    i += 1
+                    progress("Saving rows", i, len(valid))
+                    instance = getattr(form, "instance", None)
+                    is_new = instance is not None and instance.pk is None
+                    spec.save(form)
+                    if is_new:
+                        batch.append(form.instance)
         except IntegrityError:
             errors.append((row_no, "Duplicate: conflicts with another row in this file or an existing "
                                    "record (uniqueness rule)."))
             break
-        if is_new:
-            added.append(form.instance)
+        added.extend(batch)
     if errors:
         for obj in reversed(added):
             with transaction.atomic():

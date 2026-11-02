@@ -133,6 +133,9 @@ def run(job_id):
         return
     job["status"] = "running"
     save(job)
+    from . import request_cache
+
+    request_cache._start()  # statuses and module settings once, as in a web request, not once per row
     try:
         user = get_user_model().objects.get(pk=job["user_id"], is_active=True)
         host = next((h for h in settings.ALLOWED_HOSTS if h and h != "*" and not h.startswith(".")), "localhost")
