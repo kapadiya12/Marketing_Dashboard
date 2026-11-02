@@ -56,6 +56,8 @@ class ImportSpec:
     note_field: Optional[str] = "notes"  # where unrecognised values are preserved
     match_existing: Optional[Callable] = None  # (cleaned row data) -> existing instance to update, or None
     fixed: dict = field(default_factory=dict)  # column -> value used whatever the file says (a product's import page)
+    skip_values: dict = field(default_factory=dict)  # column -> values whose rows belong elsewhere (other products)
+    row_key: Optional[Callable] = None  # (mapped row data) -> what makes a row unique (platform + product), or None
 
 
 # --------------------------------------------------------------------------- reading files
@@ -461,10 +463,15 @@ def run_import(spec, headers, rows, include_samples=False, progress=None):
     # Columns the module doesn't have are kept in the record's notes, so nothing in the file is lost.
     extra = [h for h in headers if h not in matched and _norm(h) not in SERIAL_COLUMNS]
     keep_extra = bool(extra) and spec.note_field in spec.columns
-    if any(h != col for h, col in matched.items()) or extra or spec.fixed:
+    skip = {col: {_norm(v) for v in values} for col, values in spec.skip_values.items()}
+    elsewhere = 0
+    if any(h != col for h, col in matched.items()) or extra or spec.fixed or skip:
         renamed = []
         for row_no, row in rows:
             new = {col: row.get(h, "") for h, col in matched.items()}
+            if any(_norm(new.get(col, "")) in values for col, values in skip.items() if new.get(col)):
+                elsewhere += 1  # e.g. a PayEaze row in a sheet imported on RicRoot's page
+                continue
             if any(new.values()):
                 new.update(spec.fixed)
             if keep_extra:
@@ -475,6 +482,9 @@ def run_import(spec, headers, rows, include_samples=False, progress=None):
             renamed.append((row_no, new))
         rows = renamed
     errors, valid, skipped, adjustments = [], [], 0, []
+    if elsewhere:
+        adjustments.append((1, f"{elsewhere} row(s) for other products were left out; import them on that "
+                               "product's page"))
     if extra:
         where = "kept in notes" if keep_extra else "skipped"
         adjustments.append((1, f"column(s) {', '.join(extra)} are not fields of this module and were {where}"))
@@ -483,6 +493,7 @@ def run_import(spec, headers, rows, include_samples=False, progress=None):
         if h in spec.ignored_columns and h not in ("id", "created_at", "updated_at"):
             adjustments.append((1, f"column “{h}” is no longer used and was skipped"))
     mapper = RowMapper(spec)
+    first_row = {}
     for checked, (row_no, row) in enumerate(rows, 1):
         progress("Checking rows", checked, len(rows))
         if not any(row.values()):
@@ -503,7 +514,15 @@ def run_import(spec, headers, rows, include_samples=False, progress=None):
         else:
             form = spec.form_factory(data)
         if form.is_valid():
-            valid.append((row_no, form))
+            key = spec.row_key(data) if spec.row_key else None
+            if key is not None and key in first_row:  # the same listing / lead twice: the later row wins
+                at = first_row[key]
+                adjustments.append((row_no, f"row {row_no} repeats row {valid[at][0]}; the later row was used"))
+                valid[at] = (row_no, form)
+            else:
+                if key is not None:
+                    first_row[key] = len(valid)
+                valid.append((row_no, form))
             adjustments.extend((row_no, a) for a in adjusted)
         else:
             msgs = []
@@ -518,7 +537,8 @@ def run_import(spec, headers, rows, include_samples=False, progress=None):
                     hint = f" Allowed: {', '.join(allowed)}." if allowed else ""
                 msgs.append(f"{label}{shown}: {'; '.join(errs)}{hint}")
             errors.append((row_no, " | ".join(msgs)))
-    base = {"skipped": skipped, "adjustments": adjustments}
+    updated = sum(1 for _, form in valid if getattr(getattr(form, "instance", None), "pk", None))
+    base = {"skipped": skipped, "adjustments": adjustments, "updated": updated}
     if errors:
         import logging
 
@@ -925,7 +945,9 @@ def import_page(request, spec, audit=None, extra_context=None):
                     if spec.on_success:
                         spec.on_success(result["created"])
                     skipped = f" ({result['skipped']} sample row(s) skipped)" if result["skipped"] else ""
-                    messages.success(request, f"Imported {result['created']} record(s){skipped}.")
+                    new, updated = result["created"] - result.get("updated", 0), result.get("updated", 0)
+                    done = f"Imported {new} new record(s)" + (f" and updated {updated}" if updated else "")
+                    messages.success(request, f"{done}{skipped}.")
                     if result["adjustments"]:
                         summary = sorted({a for _, a in result["adjustments"]})
                         shown = "; ".join(summary[:6]) + (f"; +{len(summary) - 6} more" if len(summary) > 6 else "")

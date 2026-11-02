@@ -332,7 +332,7 @@ def test_background_import_saves_and_reports(background_imports, admin_user, pro
     assert polled["HX-Redirect"] == resp["Location"]  # finished: the polling page reloads
     done = client.get(resp["Location"], follow=True)
     assert done.redirect_chain[0][0] == reverse("products:records", args=["proceaze", "calls"])
-    assert "Imported 2 record(s)" in done.content.decode()
+    assert "Imported 2 new record(s)" in done.content.decode()
     assert sorted(ColdCall.objects.values_list("contact_name", flat=True)) == ["Asha", "Ravi"]
 
 
@@ -357,3 +357,19 @@ def test_background_import_progress_while_running(background_imports, admin_user
     assert "Importing calls.csv" in page and 'hx-trigger="load delay:2s"' in page
     partial = client.get(resp["Location"], HTTP_HX_REQUEST="true").content.decode()
     assert partial.strip().startswith("{#") or 'id="import-job"' in partial
+
+
+def test_product_page_import_leaves_out_other_products_and_merges_repeats(admin_user, products, login):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    from apps.listings.models import ListingRecord
+
+    a, b = products
+    csv = (f"product,platform,status,notes\n{a.name},Product Hunt,In Progress,first\n{b.slug},Product Hunt,"
+           f"In Progress,other product\n,Product Hunt,Approved,second\n")
+    upload = SimpleUploadedFile("listings.csv", csv.encode("utf-8"), content_type="text/csv")
+    resp = login(admin_user).post(reverse("products:record_import", args=[a.slug, "listings"]), {"file": upload},
+                                  follow=True)
+    assert "Imported 1 new record(s)" in resp.content.decode()
+    rec = ListingRecord.objects.get()
+    assert rec.product == a and rec.status == "approved" and rec.notes == "second"

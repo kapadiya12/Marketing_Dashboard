@@ -695,7 +695,12 @@ def resource_import_spec(request, resource, product=None):
     fixed = {}
     if product is not None:
         defaults["product"] = product.slug
-        fixed["product"] = product.slug  # on a product's page every row goes to that product
+        fixed["product"] = product.slug  # on a product's page every row goes to that product...
+        from apps.products.models import Product
+
+        skip_values = {"product": [v for p in Product.objects.exclude(pk=product.pk) for v in (p.slug, p.name)]}
+    else:
+        skip_values = {}  # ...except rows that name another product
 
     from django.utils.text import slugify
 
@@ -732,7 +737,7 @@ def resource_import_spec(request, resource, product=None):
         return key
 
     creators = {"tags": create_tag, "category": create_category, "status": create_status}
-    match_existing = None
+    match_existing = row_key = None
     writable = scoped_queryset(user, resource, "write")
 
     if resource.key == "listings":
@@ -745,11 +750,18 @@ def resource_import_spec(request, resource, product=None):
 
         creators["platform"] = create_platform
 
+        def row_key(data):
+            return ("listing", str(data.get("platform")), str(data.get("product")))
+
         def match_existing(data):  # one listing per platform and product: update it
             if str(data.get("platform", "")).isdigit() and str(data.get("product", "")).isdigit():
                 return writable.filter(platform_id=int(data["platform"]), product_id=int(data["product"])).first()
             return None
     elif resource.key == "leads":
+        def row_key(data):
+            email = str(data.get("email", "")).strip().lower()
+            return ("lead", email, str(data.get("product"))) if email else None
+
         def match_existing(data):  # one lead per email and product: update it
             email = str(data.get("email", "")).strip().lower()
             if email and str(data.get("product", "")).isdigit():
@@ -774,6 +786,8 @@ def resource_import_spec(request, resource, product=None):
         note_field=next((f for f in ("notes", "meeting_notes") if f in resource.form_fields), None),
         match_existing=match_existing,
         fixed=fixed,
+        skip_values=skip_values,
+        row_key=row_key,
     )
 
 
