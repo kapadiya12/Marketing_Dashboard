@@ -575,12 +575,28 @@ def _save_rows_separately(spec, valid, base, progress=lambda stage, done, total:
                                    "record (uniqueness rule)."))
             break
         added.extend(batch)
+    if not errors and added:
+        missing = _missing_on_server(added)
+        if missing:
+            errors.append((1, f"The database did not keep {missing} of the {len(added)} new row(s), so the import "
+                              "was undone. Please upload the file again."))
     if errors:
         for obj in reversed(added):
             with transaction.atomic():
-                obj.delete()
+                type(obj).objects.filter(pk=obj.pk).delete()
         return {"created": 0, "errors": errors, "total": len(valid), **base}
     return {"created": len(valid), "errors": [], "total": len(valid), **base}
+
+
+def _missing_on_server(added):
+    """How many of the rows just saved Turso doesn't have: read back after pulling a fresh copy, so the import
+    never reports rows that the dashboard won't show."""
+    if hasattr(connection, "sync_replica"):
+        connection.sync_replica(force=True)
+    by_model = {}
+    for obj in added:
+        by_model.setdefault(type(obj), []).append(obj.pk)
+    return sum(len(pks) - model.objects.filter(pk__in=pks).count() for model, pks in by_model.items())
 
 
 # --------------------------------------------------------------------------- templates & field guide
@@ -872,6 +888,9 @@ def import_page(request, spec, audit=None, extra_context=None):
     if request.method == "GET" and request.GET.get("job"):
         job = import_jobs.load(request.GET["job"], request.user)
         if job["status"] == "done":
+            if getattr(connection, "is_replica", False):  # show the new rows now: this worker and, via the marker, others
+                connection.mark_write()
+                connection.sync_replica(force=True)
             if request.headers.get("HX-Request"):  # finished while the page was polling: reload it
                 response = HttpResponse(status=204)
                 response["HX-Redirect"] = request.get_full_path()

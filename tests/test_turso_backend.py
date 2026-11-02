@@ -82,3 +82,28 @@ def test_replica_syncs_only_after_a_write_or_on_its_timer(tmp_path, monkeypatch)
     monkeypatch.setattr(base.time, "monotonic", lambda: now + base.SYNC_EVERY)  # writes from elsewhere
     worker_b.sync_replica()
     assert b.syncs == 4
+
+
+def test_commit_and_rollback_are_sent_as_sql():
+    """The driver's commit() checks the local replica for an open transaction and can skip the COMMIT that
+    a BEGIN sent to Turso needs; the backend sends it itself."""
+    from config.turso_backend.base import Connection
+
+    class Driver:
+        def __init__(self):
+            self.sent = []
+
+        def execute(self, sql, *args):
+            self.sent.append(sql)
+            if sql == "ROLLBACK":
+                raise ValueError("cannot rollback - no transaction is active")
+
+        def commit(self):  # what the replica does: nothing
+            pass
+
+    driver = Driver()
+    marks = []
+    conn = Connection(driver, on_write=lambda: marks.append(1))
+    conn.commit()
+    conn.rollback()  # nothing open: not an error
+    assert driver.sent == ["COMMIT", "ROLLBACK"] and marks == [1]

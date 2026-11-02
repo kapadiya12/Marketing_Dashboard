@@ -163,13 +163,23 @@ class Connection:
     def execute(self, query, params=None):
         return self.cursor().execute(query, params)
 
+    # atomic() opens a transaction with an SQL BEGIN, which an embedded replica sends to Turso; the driver's
+    # commit() decides from the local copy whether one is open, so it can skip the COMMIT and leave the rows
+    # uncommitted on the server. End it the same way it began.
     def commit(self):
-        _call(self.connection.commit)
+        self._end("COMMIT")
         if self.on_write:
             self.on_write()
 
     def rollback(self):
-        _call(self.connection.rollback)
+        self._end("ROLLBACK")
+
+    def _end(self, statement):
+        try:
+            _call(self.connection.execute, statement)
+        except Database.Error as exc:
+            if "no transaction" not in str(exc).lower():
+                raise
 
     def __getattr__(self, name):
         return getattr(self.connection, name)
@@ -263,9 +273,13 @@ class DatabaseWrapper(sqlite_base.DatabaseWrapper):
         except OSError:  # no write on this server yet
             return False
 
-    def sync_replica(self):
+    def sync_replica(self, force=False):
         """Pull changes made through other connections into this connection's replica, when there are any."""
-        if self.is_replica and self.connection is not None and not self.in_atomic_block and self.needs_sync():
+        if not self.is_replica or self.in_atomic_block:
+            return
+        if force:
+            self.ensure_connection()
+        if self.connection is not None and (force or self.needs_sync()):
             self._sync(self.connection)
 
 
