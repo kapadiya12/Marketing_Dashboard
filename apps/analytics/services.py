@@ -50,6 +50,8 @@ CARD_STATS = {
     "calls": [("Calls & messages", "calls"), ("Reached", "reached"), ("Interested", "interested"),
               ("Meetings booked", "meetings")],
 }
+EXTRA_CAPTIONS = {"Contacted or beyond": "contacted", "Due diligence / negotiation": "in diligence",
+                  "Registration deadlines (14 days)": "deadlines soon", "Total activity": "activity"}
 TONE_CLASS = {"success": "text-success", "warning": "text-warning", "info": "text-info", "danger": "text-danger"}
 
 
@@ -288,20 +290,73 @@ class DashboardData:
         if not res.kpis or module_key not in CARD_STATS:
             return []
         ctx = {"product_count": len(self.products), "seo_updates": self._seo_updates()}
-        by_label = {k["label"]: k for k in res.kpis(self.pqs(res.key), ctx)}
-        stats = []
-        for label, caption in CARD_STATS[module_key]:
-            k = by_label.get(label)
-            if k is None:
-                continue
+        qs = self.pqs(res.key)
+        kpis = res.kpis(qs, ctx)
+        by_label = {k["label"]: k for k in kpis}
+
+        def stat(k, caption):
             if k["url"]:
                 url = (self.list_url(res.key, period=True) + k["url"]) if k["url"].startswith("#") else k["url"]
             else:
                 url = self.list_url(res.key, period=True, **(k["link"] or {}))
             tone = "" if k["tone"] == "danger" and not k["value"] else TONE_CLASS.get(k["tone"], "")
-            stats.append({"caption": caption, "value": k["value"], "fmt": k["fmt"], "url": url, "tone": tone,
-                          "hint": k["hint"]})
+            link = k["link"] or {}
+            statuses = link.get("status", [])
+            statuses = {statuses} if isinstance(statuses, str) else set(statuses)
+            if link.get("state"):
+                statuses |= set(m.keys_in_state(res.key, link["state"]))
+            return {"caption": caption, "value": k["value"], "fmt": k["fmt"], "url": url, "tone": tone,
+                    "hint": k["hint"], "statuses": statuses}
+
+        preferred = [stat(by_label[label], caption) for label, caption in CARD_STATS[module_key] if label in by_label]
+        # Spares for boxes whose preferred figure is zero: the module's other measures, then counts of its records
+        # by status, recent activity and platforms. All from the records themselves.
+        used = {label for label, _ in CARD_STATS[module_key]}
+        spares = [stat(k, EXTRA_CAPTIONS.get(k["label"], k["label"].lower())) for k in kpis
+                  if k["label"] not in used and k["tone"] != "danger"]
+        spares += self._record_figures(res, qs)
+        if not preferred:
+            return []
+        stats, seen, counted = [preferred[0]], {preferred[0]["caption"]}, set()  # the record count always leads
+        for s in preferred[1:] + spares:
+            if len(stats) == 4:
+                break
+            # a status box repeats a figure already shown when another box counts the same statuses
+            if s["value"] and s["caption"] not in seen and not (s.get("statuses") and s["statuses"] <= counted):
+                stats.append(s)
+                seen.add(s["caption"])
+                counted |= s.get("statuses", set())
+        for s in preferred[1:]:  # not enough figures with a number: the module's own zeros
+            if len(stats) == 4:
+                break
+            if s["caption"] not in seen:
+                stats.append(s)
+                seen.add(s["caption"])
         return stats
+
+    def _record_figures(self, res, qs):
+        """Figures any module has: records per status, added this month, updated this week, platforms used."""
+        figures = []
+        rows = qs.order_by().values("status").annotate(c=Count("pk")).order_by("-c") if hasattr(
+            res.model, "status") else []
+        for row in rows:
+            info = get_status(res.key, row["status"])
+            figures.append({"caption": (info.label if info else row["status"]).lower(), "value": row["c"],
+                            "fmt": "", "url": self.list_url(res.key, period=True, status=row["status"]),
+                            "tone": TONE_CLASS.get(info.color if info else "", ""), "hint": "",
+                            "statuses": {row["status"]}})
+        now = timezone.now()
+        month = qs.filter(created_at__gte=now - datetime.timedelta(days=30)).count()
+        week = qs.filter(updated_at__gte=now - datetime.timedelta(days=7)).count()
+        figures.append({"caption": "added this month", "value": month, "fmt": "", "tone": "text-info", "hint": "",
+                        "url": self.list_url(res.key, period=True, sort="-created_at")})
+        figures.append({"caption": "updated this week", "value": week, "fmt": "", "tone": "", "hint": "",
+                        "url": self.list_url(res.key, period=True, sort="-updated_at")})
+        field = next((f for f in ("platform", "search_platform") if hasattr(res.model, f)), None)
+        if field:
+            figures.append({"caption": "platforms", "value": qs.order_by().values(field).distinct().count(),
+                            "fmt": "", "tone": "", "hint": "", "url": self.list_url(res.key, period=True)})
+        return figures
 
     def _seo_updates(self):
         if "seo_updates" not in self._cache:

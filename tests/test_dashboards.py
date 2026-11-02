@@ -162,9 +162,12 @@ def test_module_cards_show_each_modules_own_figures(admin_user, products, login)
     resp = login(admin_user).get(reverse("products:dashboard", args=[products[0].slug]))
     cards = {c["module"].key: c for c in resp.context["module_cards"]}
     for key, wanted in CARD_STATS.items():
-        assert [s["caption"] for s in cards[key]["stats"]] == [caption for _, caption in wanted], key
+        if key not in ("calls", "advertising"):  # no records: the module's own figures, all zero
+            assert [s["caption"] for s in cards[key]["stats"]] == [caption for _, caption in wanted], key
     calls = {s["caption"]: s for s in cards["calls"]["stats"]}
     assert calls["calls"]["value"] == 1 and calls["interested"]["value"] == 1
+    # boxes whose figure is zero give way to ones with a number; every figure still counts real records
+    assert len(calls) == 4 and all(s["value"] for s in calls.values())
     assert "preset=positive" in calls["interested"]["url"] and products[0].slug in calls["interested"]["url"]
     ads = {s["caption"]: s for s in cards["advertising"]["stats"]}
     assert ads["spend"]["value"] == Decimal("1200") and ads["clicks"]["value"] == 40
